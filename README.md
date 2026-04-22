@@ -2,7 +2,7 @@
 
 A Claude Code skill that runs a full regression suite against [vibium](https://www.npmjs.com/package/vibium) — a browser automation CLI built on WebDriver BiDi.
 
-The suite covers **21 confirmed bugs** in vibium v26.3.18, verified across 8 demo sites. Each test maps to a documented bug, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
+The suite covers **21 confirmed bugs** in vibium v26.3.18, verified across 12 sites. Each test maps to a documented bug, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
 
 ## Usage
 
@@ -42,9 +42,11 @@ Claude will execute all 21 tests against the running vibium daemon and print a s
 
 ## Cross-site coverage
 
-Critical and high-severity bugs are verified across 8 sites:
+Bugs are verified across 12 sites:
 
 - [testtrack.org](https://testtrack.org) — primary repro site
+- [demoqa.com](https://demoqa.com) — B5 select tests
+- [the-internet.herokuapp.com](https://the-internet.herokuapp.com) — B3 dialog / B19 upload
 - [var.parts](https://var.parts)
 - [sauce-demo.myshopify.com](https://sauce-demo.myshopify.com/collections/all)
 - [saucedemo.com](https://www.saucedemo.com)
@@ -52,8 +54,8 @@ Critical and high-severity bugs are verified across 8 sites:
 - [coffee-cart.app](https://coffee-cart.app)
 - [ecommerce-playground.lambdatest.io](https://ecommerce-playground.lambdatest.io)
 - [automationteststore.com](https://automationteststore.com)
-
-WebSocket commands (B14, B18) also use `wss://echo.websocket.org` and `wss://ws.ifelse.io` as positive-baseline echo servers.
+- `wss://echo.websocket.org` — B14/B18 positive baseline
+- `wss://ws.ifelse.io` — B14/B18 positive baseline
 
 ## Requirements
 
