@@ -26,12 +26,12 @@ Claude will execute all 21 tests against the running vibium daemon and print a s
 | B6 | `vibium click --timeout` | Flag accepted but silently ignored |
 | B7 | `vibium attr` | Boolean attributes indistinguishable from absent |
 | B8 | `vibium eval` | Objects and arrays print Go internal repr |
-| B9 | `vibium is actionable` | Requires 2 args; all sibling commands require 1 |
-| B10 | `vibium back` | Off-by-one at history boundary navigates to `about:blank` |
-| B11 | `vibium completion zsh` | Generated script errors on source |
-| B12 | `vibium daemon status/stop` | Always exit 0 regardless of daemon state |
-| B13 | `vibium geolocation` | Negative coordinates parsed as flags |
-| B14 | `vibium bidi-test` / `vibium launch-test` | BiDi WebSocket URL blank in ChromeDriver 147.0 |
+| B9 | `vibium bidi-test` / `vibium launch-test` | BiDi WebSocket URL blank in ChromeDriver 147.0 |
+| B10 | `vibium is actionable` | Requires 2 args; all sibling commands require 1 |
+| B11 | `vibium back` | Off-by-one at history boundary navigates to `about:blank` |
+| B12 | `vibium completion zsh` | Generated script errors on source |
+| B13 | `vibium daemon status/stop` | Always exit 0 regardless of daemon state |
+| B14 | `vibium geolocation` | Negative coordinates parsed as flags |
 | B15 | `vibium sleep` | Negative values parsed as flags |
 | B16 | `vibium sleep` | Oversize values silently clamp to 30000ms |
 | B17 | `vibium check` | No element type guard |
@@ -54,8 +54,8 @@ Bugs are verified across 12 sites:
 - [coffee-cart.app](https://coffee-cart.app)
 - [ecommerce-playground.lambdatest.io](https://ecommerce-playground.lambdatest.io)
 - [automationteststore.com](https://automationteststore.com)
-- `wss://echo.websocket.org` — B14/B18 positive baseline
-- `wss://ws.ifelse.io` — B14/B18 positive baseline
+- `wss://echo.websocket.org` — B9/B18 positive baseline
+- `wss://ws.ifelse.io` — B9/B18 positive baseline
 
 ## Requirements
 
