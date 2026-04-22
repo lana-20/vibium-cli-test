@@ -253,7 +253,35 @@ FAIL if: output contains `map[type:string value:...]` or `map[type:number value:
 
 ---
 
-### B9 — `vibium is actionable` — requires 2 args (Medium · P2)
+### B9 — `vibium bidi-test` / `vibium launch-test` — WebSocket URL blank (High · P3)
+
+```sh
+vibium bidi-test
+```
+
+PASS if: all 5 steps pass (including `[3/5] Connecting to BiDi WebSocket...` succeeds)
+FAIL if: `WebSocket URL: ` is blank at step 2 and `Error connecting: ... malformed ws or wss URL`
+
+Also test `vibium launch-test` — same bug, different command:
+```sh
+vibium launch-test
+```
+
+PASS if: BiDi WebSocket URL is non-empty and connection succeeds
+FAIL if: `BiDi WebSocket: ` is blank and command hangs or errors
+
+**Positive baseline** — when B9 is fixed, `vibium ws-test` against known-good echo servers should connect cleanly:
+```sh
+vibium ws-test wss://echo.websocket.org; echo "exit: $?"
+vibium ws-test wss://ws.ifelse.io; echo "exit: $?"
+```
+
+PASS if: both connect and exchange a message, exit 0
+FAIL if: connection fails (would indicate a different issue, not B9)
+
+---
+
+### B10 — `vibium is actionable` — requires 2 args (Medium · P2)
 
 ```sh
 vibium go https://testtrack.org
@@ -262,11 +290,11 @@ echo "exit: $?"
 ```
 
 PASS if: returns `true` or `false`, exit 0
-FAIL if: `Error: expected 2 arguments, got 1`
+FAIL if: `Error: accepts 2 arg(s), received 1`
 
 ---
 
-### B10 — `vibium back` — off-by-one at history boundary (Medium · P2)
+### B11 — `vibium back` — off-by-one at history boundary (Medium · P2)
 
 ```sh
 vibium page new https://example.com
@@ -281,10 +309,10 @@ FAIL if: exit 0 (`Navigated back`) and `vibium url` returns `about:blank`
 
 ---
 
-### B11 — `vibium completion zsh` — generated script errors on source (Medium · P2)
+### B12 — `vibium completion zsh` — generated script errors on source (Medium · P2)
 
 ```sh
-zsh -c 'source <(vibium completion zsh) 2>/tmp/vibium-b11-stderr.txt; echo "exit: $?"; cat /tmp/vibium-b11-stderr.txt'
+zsh -c 'source <(vibium completion zsh) 2>/tmp/vibium-b12-stderr.txt; echo "exit: $?"; cat /tmp/vibium-b12-stderr.txt'
 ```
 
 PASS if: exit 0, no output on stderr
@@ -295,7 +323,7 @@ Note: on zsh 5.9 the exit code is 0 even when broken — check stderr, not just 
 
 ---
 
-### B12 — `vibium daemon status/stop` — always exit 0 (Medium · P2)
+### B13 — `vibium daemon status/stop` — always exit 0 (Medium · P2)
 
 ```sh
 vibium daemon stop
@@ -315,7 +343,7 @@ vibium daemon start && sleep 2
 
 ---
 
-### B13 — `vibium geolocation` — negative coords parsed as flags (Medium · P2)
+### B14 — `vibium geolocation` — negative coords parsed as flags (Medium · P2)
 
 ```sh
 vibium go https://testtrack.org
@@ -325,34 +353,6 @@ echo "exit: $?"
 
 PASS if: exit 0, geolocation overridden with no error
 FAIL if: `Error: unknown shorthand flag: '1' in -122.4194`
-
----
-
-### B14 — `vibium bidi-test` / `vibium launch-test` — WebSocket URL blank (High · P3)
-
-```sh
-vibium bidi-test
-```
-
-PASS if: all 5 steps pass (including `[3/5] Connecting to BiDi WebSocket...` succeeds)
-FAIL if: `WebSocket URL: ` is blank at step 2 and `Error connecting: ... malformed ws or wss URL`
-
-Also test `vibium launch-test` — same bug, different command:
-```sh
-vibium launch-test
-```
-
-PASS if: BiDi WebSocket URL is non-empty and connection succeeds
-FAIL if: `BiDi WebSocket: ` is blank and command hangs or errors
-
-**Positive baseline** — when B14 is fixed, `vibium ws-test` against known-good echo servers should connect cleanly:
-```sh
-vibium ws-test wss://echo.websocket.org; echo "exit: $?"
-vibium ws-test wss://ws.ifelse.io; echo "exit: $?"
-```
-
-PASS if: both connect and exchange a message, exit 0
-FAIL if: connection fails (would indicate a different issue, not B14)
 
 ---
 
@@ -499,12 +499,12 @@ Print a summary table with actual results filled in:
 ║  B6  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B7  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
 ║  B8  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
-║  B9  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║  B9  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B10  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B11  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B12  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B13  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
-║ B14  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B14  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B15  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B16  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B17  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
