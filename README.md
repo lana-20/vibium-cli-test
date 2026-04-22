@@ -20,7 +20,7 @@ Claude will execute all 21 tests against the running vibium daemon and print a s
 |---|---------|-----|
 | B1 | `vibium count` | Go type mismatch — crashes on every selector |
 | B2 | `vibium storage` | Go type mismatch — crashes on all sites |
-| B3 | `vibium dialog` | Alert deadlocks daemon; requires force-kill to recover |
+| B3 | `vibium dialog` | Any navigation event deadlocks daemon — JS dialogs, form POST navigation, in-iframe nav link clicks; requires force-kill to recover |
 | B4 | `vibium cookies <name> <value>` | BiDi requires domain field; set always fails |
 | B5 | `vibium select` | Silent false success on invalid or text-matched options |
 | B6 | `vibium click --timeout` | Flag accepted but silently ignored |

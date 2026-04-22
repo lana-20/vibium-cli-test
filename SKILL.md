@@ -103,9 +103,16 @@ FAIL (cross-site) if: unmarshal error on any site
 
 ---
 
-### B3 — `vibium dialog` — alert deadlocks daemon (Critical · P1)
+### B3 — `vibium dialog` — navigation events deadlock daemon (Critical · P1)
 
-**Caution:** if this test FAILS, the daemon will be deadlocked. `vibium daemon stop` will also hang in this state — force-kill instead:
+**Known trigger patterns** — all three deadlock the daemon socket with identical symptoms:
+1. **JS dialog** (this test) — `vibium click` on any element that calls `window.alert/confirm/prompt`
+2. **Form POST navigation** — clicking a submit button that triggers a server-side POST and full page reload (confirmed: PHP Travels demo form submit)
+3. **In-iframe nav link** — clicking category links inside a Presta Shop inner subdomain (the iframe navigation event cannot be tracked by the daemon socket)
+
+A fix for B3 must address all three patterns, not just the JS dialog case.
+
+**Caution:** if this test FAILS, the daemon will be deadlocked. `vibium daemon stop` will also hang — force-kill instead:
 `pkill -f vibium && sleep 2 && vibium daemon start && sleep 2`
 
 ```sh
