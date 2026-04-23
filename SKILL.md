@@ -1,11 +1,11 @@
 ---
 name: vibium-cli-test
-description: Regression test suite for 27 known vibium CLI bugs (B1–B21 original + B22–B27 discovered during practice-testing). Run after fixes to verify each bug is resolved. Tests are ordered by priority then severity (P1 Critical first, P4 Low last), labeled PASS/FAIL/SKIP with exact repro steps and cross-site verification.
+description: Regression test suite for 27 known vibium CLI bugs (B1–B27), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site verification.
 ---
 
 # vibium CLI Regression Test Suite
 
-Run all 27 tests and produce a final summary table. Each test maps to a bug in `/Users/lanabegunova/vibium-bug-report.md`. B1–B21 are the original report bugs. B22–B24 were discovered during batch 1–2 practice-testing (2026-04-22). B25–B26 were discovered during batch 3 practice-testing (2026-04-22). B27 was discovered during batch 4 practice-testing (2026-04-22).
+Run all 27 tests and produce a final summary table. Each test maps to a bug in `/Users/lanabegunova/vibium-bug-report.md`. Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B27 are P4.
 
 ## Setup
 
@@ -332,7 +332,7 @@ FAIL if: fails in ~160ms with `timeout after 0s` (timeout flag ignored)
 
 ---
 
-### B22 — `vibium fill` — crashes on `<textarea>` elements (High · P1)
+### B7 — `vibium fill` — crashes on `<textarea>` elements (High · P1)
 
 **Source:** Discovered during Evil Tester testing (textarea in the forms test page).
 
@@ -369,7 +369,7 @@ PASS if: exit 0 and value contains "workaround text"
 
 ---
 
-### B7 — `vibium attr` — boolean attributes indistinguishable from absent (High · P2)
+### B8 — `vibium attr` — boolean attributes indistinguishable from absent (High · P2)
 
 ```sh
 vibium content '<input id="req" type="text" required><input id="norq" type="text">'
@@ -382,7 +382,7 @@ FAIL if: both return identical output (both empty string or both `{"ok":true,"re
 
 ---
 
-### B8 — `vibium eval` — objects/arrays print Go internal repr (High · P2)
+### B9 — `vibium eval` — objects/arrays print Go internal repr (High · P2)
 
 ```sh
 vibium go https://testtrack.org
@@ -484,7 +484,7 @@ FAIL if: `Error: unknown shorthand flag: '1' in -122.4194`
 
 ---
 
-### B23 — `vibium find text` — searches DOM text, not CSS-transformed display text (Medium · P2)
+### B15 — `vibium find text` — searches DOM text, not CSS-transformed display text (Medium · P2)
 
 **Source:** Discovered during AcademyBugs testing. Nav items and buttons had CSS `text-transform: uppercase` visually but mixed-case DOM text. Searching by the uppercase rendered string returned no results.
 
@@ -551,7 +551,7 @@ echo "exit: $? (lowercase DOM text)"
 
 Note: unlike AcademyBugs (where DOM text is mixed-case and CSS transforms it), QA Practice ADD TO CART buttons have all-caps DOM text. This tests whether `vibium find text` matches case-insensitively or case-sensitively.
 
-PASS (B23 consistent behavior) if: only the exact DOM-cased `"ADD TO CART"` succeeds (case-sensitive matching)
+PASS (B15 consistent behavior) if: only the exact DOM-cased `"ADD TO CART"` succeeds (case-sensitive matching)
 PASS (alternative consistent behavior) if: both succeed (case-insensitive matching — also consistent)
 FAIL if: results differ between this site and AcademyBugs for the same input (inconsistent matching rules)
 
@@ -559,9 +559,9 @@ Regardless — for automation reliability use `vibium map` refs instead of `find
 
 ---
 
-### B25 — `vibium map` — Web Components shadow DOM elements not exposed (Medium · P2)
+### B16 — `vibium map` — Web Components shadow DOM elements not exposed (Medium · P2)
 
-**Source:** Discovered during Polymer Shop testing (batch 3, 2026-04-22). All product listing, detail, cart, and checkout UI lives inside nested `<shop-app>` custom element shadow roots. `vibium map` returns "No interactive elements found" on every page. This is distinct from B24 (CSS-styled non-button `<li>` elements) — here the issue is shadow DOM encapsulation, not element type.
+**Source:** Discovered during Polymer Shop testing (batch 3, 2026-04-22). All product listing, detail, cart, and checkout UI lives inside nested `<shop-app>` custom element shadow roots. `vibium map` returns "No interactive elements found" on every page. This is distinct from B22 (CSS-styled non-button `<li>` elements) — here the issue is shadow DOM encapsulation, not element type.
 
 ```sh
 vibium go https://shop.polymer-project.org/ && vibium wait load
@@ -590,7 +590,7 @@ FAIL (full failure) if: eval also returns null or 0 (shadow DOM completely opaqu
 
 ---
 
-### B26 — `vibium find role button` — times out on `input[type=submit]` (Medium · P2)
+### B17 — `vibium find role button` — times out on `input[type=submit]` (Medium · P2)
 
 **Source:** Discovered during Practice Software Testing (practicesoftwaretesting.com) batch 3 testing. The login form uses `<input type="submit" value="Login">` instead of `<button>`. Per ARIA spec, `input[type=submit]` has implicit role `button`, so `vibium find role button --name "Login"` should find it. Instead it times out after 30s.
 
@@ -616,9 +616,9 @@ Live site verification — PST login:
 ```sh
 vibium go https://practicesoftwaretesting.com/auth/login && vibium wait load
 
-# This times out (B26 symptom)
+# This times out (B17 symptom)
 vibium find role button --name "Login" --timeout 5000
-echo "exit: $? (should timeout with B26 present)"
+echo "exit: $? (should timeout with B17 present)"
 
 # This works (eval workaround)
 vibium fill "#email" "customer@practicesoftwaretesting.com"
@@ -628,14 +628,14 @@ vibium url
 echo "url after login (workaround)"
 ```
 
-PASS (B26 fixed) if: `find role button --name "Login"` returns a ref, exit 0
-FAIL (B26 present) if: `find role button --name "Login"` times out; eval workaround required
+PASS (B17 fixed) if: `find role button --name "Login"` returns a ref, exit 0
+FAIL (B17 present) if: `find role button --name "Login"` times out; eval workaround required
 
 ---
 
-### B27 — `vibium fill` / `vibium type` — negative values parsed as flags (Medium · P2)
+### B18 — `vibium fill` / `vibium type` — negative values parsed as flags (Medium · P2)
 
-**Source:** Discovered during BugEater QA Training Simulator testing (batch 4, 2026-04-22). Same root cause as B14 (geolocation negative coords) and B15 (sleep negative values) — the vibium CLI argument parser treats any argument starting with `-` as a flag rather than a value. Affects `vibium fill` and `vibium type`, meaning any form field that needs a negative number (e.g. `-2`, `-99.5`) cannot be filled directly.
+**Source:** Discovered during BugEater QA Training Simulator testing (batch 4, 2026-04-22). Same root cause as B14 (geolocation negative coords) and B20 (sleep negative values) — the vibium CLI argument parser treats any argument starting with `-` as a flag rather than a value. Affects `vibium fill` and `vibium type`, meaning any form field that needs a negative number (e.g. `-2`, `-99.5`) cannot be filled directly.
 
 ```sh
 vibium go https://bugeater.web.app/app/challenge/learn/adder && vibium wait load
@@ -665,7 +665,7 @@ PASS (workaround) if: eval returns `"-2"`
 
 ---
 
-### B9 — `vibium bidi-test` / `vibium launch-test` — WebSocket URL blank (High · P3)
+### B19 — `vibium bidi-test` / `vibium launch-test` — WebSocket URL blank (High · P3)
 
 ```sh
 vibium bidi-test
@@ -683,7 +683,7 @@ FAIL if: `BiDi WebSocket: ` is blank and command hangs or errors
 
 ---
 
-### B15 — `vibium sleep` — negative values parsed as flags (Medium · P3)
+### B20 — `vibium sleep` — negative values parsed as flags (Medium · P3)
 
 ```sh
 vibium sleep -1
@@ -695,7 +695,7 @@ FAIL if: `Error: unknown shorthand flag: '1' in -1`
 
 ---
 
-### B16 — `vibium sleep` — oversize values silently clamp (Medium · P3)
+### B21 — `vibium sleep` — oversize values silently clamp (Medium · P3)
 
 ```sh
 time vibium sleep 30001
@@ -707,7 +707,7 @@ FAIL if: exits 0 after sleeping exactly 30s with `Slept for 30000 ms` (silently 
 
 ---
 
-### B24 — `vibium map` — custom-rendered and canvas elements not exposed (Medium · P3)
+### B22 — `vibium map` — custom-rendered and canvas elements not exposed (Medium · P3)
 
 **Source:** Discovered during Black Box Puzzles testing. Interactive clickable circles rendered as CSS-styled `<li>` elements (not `<button>` or `<a>`) did not appear in `vibium map` output. Required `getBoundingClientRect()` + `vibium mouse click x y`.
 
@@ -743,7 +743,7 @@ FAIL if: a11y-tree also misses them (full discovery failure — no alternative t
 
 ---
 
-### B17 — `vibium check` — no element type guard (Low · P3)
+### B23 — `vibium check` — no element type guard (Low · P3)
 
 ```sh
 vibium go https://testtrack.org
@@ -758,7 +758,7 @@ FAIL if: silent exit 0 with no feedback when targeting a non-checkbox
 
 ---
 
-### B18 — `vibium ws-test` — http/https scheme not caught (Low · P3)
+### B24 — `vibium ws-test` — http/https scheme not caught (Low · P3)
 
 ```sh
 vibium ws-test https://testtrack.org; echo "exit: $?"
@@ -770,7 +770,7 @@ FAIL if: generic `failed to connect... malformed ws or wss URL` with no scheme g
 
 ---
 
-### B19 — `vibium upload` — no element type guard (Low · P3)
+### B25 — `vibium upload` — no element type guard (Low · P3)
 
 ```sh
 vibium go https://the-internet.herokuapp.com/upload
@@ -785,7 +785,7 @@ FAIL if: exit 0 with no validation error, OR exit 1 with only `BiDi error: unabl
 
 ---
 
-### B20 — `vibium serve` — noisy teardown (Low · P4)
+### B26 — `vibium serve` — noisy teardown (Low · P4)
 
 ```sh
 vibium serve --port 8090 &
@@ -813,7 +813,7 @@ FAIL if: only `bind: address already in use` with no `--port` hint
 
 ---
 
-### B21 — `vibium content ""` — inconsistent error message (Low · P4)
+### B27 — `vibium content ""` — inconsistent error message (Low · P4)
 
 ```sh
 vibium content ""
@@ -850,27 +850,27 @@ Print a summary table with actual results filled in:
 ║  B4  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B5  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B6  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
-║ B22  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
-║  B7  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B7  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B8  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
+║  B9  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B10  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B11  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B12  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B13  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B14  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
-║ B23  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
-║ B25  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
-║ B26  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
-║ B27  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
-║  B9  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B15  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B16  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B24  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B17  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B18  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B19  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B20  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
-║ B21  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
+║ B15  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B16  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B17  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B18  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║  B19  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B20  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B21  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B22  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B23  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B24  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B25  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B26  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
+║ B27  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ╠══════╩══════════╩══════════╩══════════════════════════════════╣
 ║  X PASS   Y FAIL   Z SKIP   (27 total)                          ║
 ╚══════════════════════════════════════════════════════════════════╝
