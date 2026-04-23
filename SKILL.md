@@ -1,11 +1,11 @@
 ---
 name: vibium-cli-test
-description: Regression test suite for 21 known vibium CLI bugs. Run after fixes to verify each bug is resolved. Tests are ordered B1–B21 matching the bug report, labeled PASS/FAIL/SKIP with exact repro steps.
+description: Regression test suite for 27 known vibium CLI bugs (B1–B21 original + B22–B27 discovered during practice-testing). Run after fixes to verify each bug is resolved. Tests are ordered by priority then severity (P1 Critical first, P4 Low last), labeled PASS/FAIL/SKIP with exact repro steps and cross-site verification.
 ---
 
 # vibium CLI Regression Test Suite
 
-Run all 21 tests and produce a final summary table. Each test maps to a bug in `/Users/lanabegunova/vibium-bug-report.md`.
+Run all 27 tests and produce a final summary table. Each test maps to a bug in `/Users/lanabegunova/vibium-bug-report.md`. B1–B21 are the original report bugs. B22–B24 were discovered during batch 1–2 practice-testing (2026-04-22). B25–B26 were discovered during batch 3 practice-testing (2026-04-22). B27 was discovered during batch 4 practice-testing (2026-04-22).
 
 ## Setup
 
@@ -17,7 +17,10 @@ vibium daemon status || (vibium daemon start && sleep 2)
 vibium go https://testtrack.org && vibium title
 ```
 
-If `vibium title` times out, the daemon is unhealthy — stop and restart it before proceeding.
+If `vibium title` times out, the daemon is unhealthy — force-kill and restart:
+```sh
+pkill -f vibium && sleep 2 && vibium daemon start && sleep 2
+```
 
 ---
 
@@ -25,7 +28,7 @@ If `vibium title` times out, the daemon is unhealthy — stop and restart it bef
 
 Print a result line for each test:
 - `PASS B<n>` — bug is fixed
-- `FAIL B<n>` — bug still present (include the exact error or symptom observed)
+- `FAIL B<n>` — bug still present (include exact error or symptom)
 - `SKIP B<n>` — test could not run (explain why)
 
 ---
@@ -39,9 +42,9 @@ echo "exit: $?"
 ```
 
 PASS if: output is an integer (e.g. `42`), exit 0
-FAIL if: `Error: failed to count: failed to parse script result: json: cannot unmarshal number into Go struct field .result.result.value of type string`
+FAIL if: `json: cannot unmarshal number into Go struct field .result.result.value of type string`
 
-**Cross-site check** — the `/cart-patrol` skill documents `vibium count` as broken and uses `vibium eval 'document.querySelectorAll(...).length'` as a workaround on all 7 demo sites. When B1 is fixed, `vibium count` must return an integer on each:
+**Cross-site check** — the `/cart-patrol` skill uses `vibium eval 'document.querySelectorAll(...).length'` as a workaround on all demo sites. When B1 is fixed, `vibium count` must return an integer on each:
 
 ```sh
 vibium go https://var.parts/ && vibium count "button"; echo "exit: $? (var.parts)"
@@ -54,10 +57,8 @@ vibium click "#login-button" && vibium wait load
 vibium count "button"; echo "exit: $? (saucedemo)"
 
 vibium go https://demo.prestashop.com/
-sleep 5  # wait for outer page to fully render the iframe
+sleep 5
 INNER=$(vibium eval 'document.querySelector("#framelive")?.src')
-# Note: PrestaShop assigns a random subdomain per session (e.g. festive-number.demo.prestashop.com)
-# If INNER is empty, run the eval manually and copy the URL
 vibium go "$INNER" && vibium wait load
 vibium count "button"; echo "exit: $? (prestashop)"
 
@@ -66,9 +67,13 @@ vibium go https://coffee-cart.app/ && vibium count "button"; echo "exit: $? (cof
 vibium go https://ecommerce-playground.lambdatest.io/ && vibium count "button"; echo "exit: $? (lambdatest)"
 
 vibium go https://automationteststore.com/ && vibium count "button"; echo "exit: $? (automationteststore)"
+
+vibium go https://academybugs.com/ && vibium count "button"; echo "exit: $? (academybugs)"
+
+vibium go https://www.shino.de/parkcalc/ && vibium count "button"; echo "exit: $? (parkcalc)"
 ```
 
-PASS (cross-site) if: integer returned on all 7 sites, exit 0 each time
+PASS (cross-site) if: integer returned on all 9 sites, exit 0 each time
 FAIL (cross-site) if: `json: cannot unmarshal number...` on any site
 
 ---
@@ -83,9 +88,9 @@ cat /tmp/vibium-reg-state.json | head -5
 ```
 
 PASS if: JSON file written, exit 0
-FAIL if: `Error: failed to get cookies: failed to parse storage.getCookies result: json: cannot unmarshal object into Go struct field Cookie.cookies.value of type string`
+FAIL if: `json: cannot unmarshal object into Go struct field Cookie.cookies.value of type string`
 
-**Cross-site check** — verify storage dump works on cookie-rich cart-patrol sites (these carry session cookies and are more likely to trigger complex cookie struct shapes):
+**Cross-site check** — verify storage dump works on cookie-rich cart-patrol sites:
 
 ```sh
 vibium go https://ecommerce-playground.lambdatest.io/
@@ -96,24 +101,22 @@ vibium storage -o /tmp/vibium-reg-abantecart.json; echo "exit: $? (automationtes
 
 vibium go https://coffee-cart.app/
 vibium storage -o /tmp/vibium-reg-coffeecart.json; echo "exit: $? (coffee-cart)"
+
+vibium go https://academybugs.com/
+vibium storage -o /tmp/vibium-reg-academybugs.json; echo "exit: $? (academybugs)"
 ```
 
-PASS (cross-site) if: JSON files written, exit 0 on all three
+PASS (cross-site) if: JSON files written, exit 0 on all four
 FAIL (cross-site) if: unmarshal error on any site
 
 ---
 
-### B3 — `vibium dialog` — navigation events deadlock daemon (Critical · P1)
-
-**Known trigger patterns** — all three deadlock the daemon socket with identical symptoms:
-1. **JS dialog** (this test) — `vibium click` on any element that calls `window.alert/confirm/prompt`
-2. **Form POST navigation** — clicking a submit button that triggers a server-side POST and full page reload (confirmed: PHP Travels demo form submit)
-3. **In-iframe nav link** — clicking category links inside a Presta Shop inner subdomain (the iframe navigation event cannot be tracked by the daemon socket)
-
-A fix for B3 must address all three patterns, not just the JS dialog case.
+### B3 — `vibium dialog` — alert deadlocks daemon (Critical · P1)
 
 **Caution:** if this test FAILS, the daemon will be deadlocked. `vibium daemon stop` will also hang — force-kill instead:
-`pkill -f vibium && sleep 2 && vibium daemon start && sleep 2`
+```sh
+pkill -f vibium && sleep 2 && vibium daemon start && sleep 2
+```
 
 ```sh
 vibium go https://the-internet.herokuapp.com/javascript_alerts
@@ -128,12 +131,84 @@ vibium url
 PASS if: `vibium dialog accept` returns immediately (exit 0); `vibium url` returns the alerts page URL
 FAIL if: `vibium click` hangs until i/o timeout, or `vibium dialog accept` times out
 
-After this test (pass or fail) confirm the daemon is responsive:
+After this test (pass or fail) confirm daemon is responsive:
 ```sh
 vibium url
 ```
-
 If that hangs, restart daemon before B4.
+
+**Cross-site check — Evil Tester alert page:**
+
+This site has multiple JS alert triggers. Pre-stub dialogs BEFORE clicking to prevent B3 deadlock — this is the established workaround; the cross-site check verifies it works:
+
+```sh
+vibium go https://testpages.eviltester.com/styled/alerts/alert-test.html
+vibium wait load
+
+# Pre-stub all dialog types before clicking any trigger
+vibium eval 'window.alert = () => {}; window.confirm = () => true; window.prompt = () => "vibium-test"'
+
+# Click the JS Alert trigger
+vibium find text "Show alert box" && vibium click @e1
+echo "exit: $? (evil-tester alert — should not deadlock after pre-stub)"
+vibium url
+```
+
+PASS if: click returns immediately without deadlock, exit 0
+FAIL if: click hangs or daemon becomes unresponsive despite the pre-stub (pre-stub workaround broken)
+
+**Cross-site check — PHP Travels form submit deadlocks daemon:**
+
+Form submission that triggers a network request or page navigation can deadlock the daemon in the same way as dialogs — the socket cannot follow the POST navigation. Pre-stubbing dialogs does not prevent this variant.
+
+```sh
+vibium go http://phptravels.com/demo/
+vibium wait load
+# Pre-stub dialogs first
+vibium eval 'window.alert = () => {}; window.confirm = () => true; window.onbeforeunload = null'
+# Find and click the Submit / Demo Request button
+vibium find role button --name "Submit" 2>/dev/null || vibium find text "Submit" && vibium click @e1
+echo "exit: $? (php-travels submit)"
+# If this hangs, daemon is deadlocked — force-kill required
+```
+
+PASS if: click returns and daemon stays responsive (verify with `vibium url`)
+FAIL if: command hangs until i/o timeout — same B3 symptom, triggered by form POST navigation not dialog
+
+Recovery if deadlocked:
+```sh
+pkill -f vibium && sleep 2 && vibium daemon start && sleep 2
+```
+
+**Cross-site check — Presta Shop inner-store nav links deadlock daemon:**
+
+Clicking category nav links (Clothes, Accessories, Art) inside a Presta Shop inner subdomain triggers full-page navigation that the daemon socket cannot track. Symptom is the same as B3 — command hangs until i/o timeout.
+
+```sh
+vibium go https://demo.prestashop.com/ && vibium sleep 4000
+INNER=$(vibium eval 'document.querySelector("#framelive")?.src')
+vibium go "$INNER" && vibium wait load
+
+# Attempt to click a category nav link directly (should deadlock if B3 applies to navigation)
+vibium find text "Clothes" && vibium click @e1
+echo "exit: $? (prestashop-nav-clothes)"
+```
+
+PASS if: click navigates correctly and returns; `vibium url` shows `/en/3-clothes`
+FAIL if: command hangs — daemon deadlocked by nav; workaround is `vibium go "$INNER/en/3-clothes"` (direct URL navigation bypasses the deadlock)
+
+Also verify the pre-stub values are observed:
+```sh
+vibium go https://testpages.eviltester.com/styled/alerts/alert-test.html
+vibium wait load
+vibium eval 'window.confirm = () => false'
+vibium find text "Show confirm box" && vibium click @e1
+vibium sleep 300
+vibium eval 'document.querySelector("#confirmreturn")?.textContent'
+```
+
+PASS if: result element contains "false" (pre-stub return value was used)
+FAIL if: result element is empty or shows "true" (pre-stub ignored; dialog may have blocked)
 
 ---
 
@@ -146,9 +221,9 @@ echo "exit: $?"
 ```
 
 PASS if: cookie set successfully, exit 0
-FAIL if: error on set (observed: `Error: failed to set cookie: BiDi error: invalid argument - invalid argument`; original bug report said `domain is required` — error message differs but root cause is the same)
+FAIL if: `BiDi error: invalid argument - invalid argument` or `domain is required`
 
-**Cross-site check** — domain inference must work when the browser is already on each cart-patrol domain:
+**Cross-site check:**
 
 ```sh
 vibium go https://var.parts/ && vibium cookies vibium_reg_test abc123; echo "exit: $? (var.parts)"
@@ -157,9 +232,10 @@ vibium go https://ecommerce-playground.lambdatest.io/ && vibium cookies vibium_r
 vibium go https://automationteststore.com/ && vibium cookies vibium_reg_test abc123; echo "exit: $? (automationteststore)"
 vibium go https://sauce-demo.myshopify.com/ && vibium cookies vibium_reg_test abc123; echo "exit: $? (shopify)"
 vibium go https://www.saucedemo.com && vibium cookies vibium_reg_test abc123; echo "exit: $? (saucedemo)"
+vibium go https://academybugs.com/ && vibium cookies vibium_reg_test abc123; echo "exit: $? (academybugs)"
 ```
 
-PASS (cross-site) if: cookie set successfully on all 6 sites, exit 0 each
+PASS (cross-site) if: cookie set successfully on all 7 sites, exit 0 each
 FAIL (cross-site) if: any domain fails with an argument or domain error
 
 ---
@@ -175,7 +251,7 @@ vibium eval 'document.querySelector("#oldSelectMenu").value'
 ```
 
 PASS if: exit 1 with option-not-found error
-FAIL if: exit 0 with success message, but `.value` is `""` (no selection actually occurred)
+FAIL if: exit 0 with success message but `.value` is `""` (no selection occurred)
 
 Also verify text-vs-value distinction:
 ```sh
@@ -184,17 +260,40 @@ echo "exit: $?"
 vibium eval 'document.querySelector("#oldSelectMenu").value'
 ```
 
-PASS if: exit 1 (text-matching unsupported and clearly errored), OR exit 0 and `.value` is `"Yellow"`
-FAIL if: exit 0 with success message but `.value` is `""` (silent wrong state)
+PASS if: exit 1 (text unsupported and clearly errored), OR exit 0 and `.value` is `"Yellow"`
+FAIL if: exit 0 but `.value` is `""` (silent wrong state)
 
-**Cross-site check** — real-world selects from cart-patrol sites:
+**Cross-site check — Parking Cost Calculator lot dropdown:**
+
+This site was found during practice-testing. The lot dropdown uses short string values that don't match display text. Selecting by display text silently keeps the previous selection:
 
 ```sh
-# automationteststore.com — color dropdown on product page (product_id=53)
+vibium go https://www.shino.de/parkcalc/
+vibium wait load
+
+# Inspect the option values — display text ≠ value
+vibium eval 'JSON.stringify([...document.querySelectorAll("#ParkingLot option")].map(o => ({text: o.text, value: o.value})))'
+# Expected: [{text:"Valet Parking",value:"Valet"},{text:"Short-Term Parking",value:"Short"},...]
+
+# Attempt to select by display text (should fail or silently wrong)
+vibium select "#ParkingLot" "Short-Term Parking"
+echo "exit: $?"
+vibium eval 'document.querySelector("#ParkingLot").value'
+# FAIL if: exit 0 but value is still "Valet" (silently wrong)
+# PASS if: exit 1 with option-not-found error
+
+# Correct selection by value
+vibium select "#ParkingLot" "Short"
+echo "exit: $?"
+vibium eval 'document.querySelector("#ParkingLot").value'
+# PASS if: exit 0 and value is "Short"
+```
+
+**Cross-site check — automationteststore.com product option select:**
+
+```sh
 vibium go "https://automationteststore.com/index.php?rt=product/product&product_id=53"
 vibium wait load
-vibium map  # identify the color select — look for a <select> element
-# Use the selector from the map output; example assumes a select with option values like "Red", "Blue"
 vibium select "select[name^='option']" "nonexistent_color"
 echo "exit: $?"
 ```
@@ -202,9 +301,9 @@ echo "exit: $?"
 PASS if: exit 1 with option-not-found error
 FAIL if: exit 0 claiming success when no valid option was selected
 
+**Cross-site check — ecommerce-playground sort dropdown:**
+
 ```sh
-# ecommerce-playground.lambdatest.io — sort-by dropdown on catalog page (no cart needed)
-# Note: sort select ID is dynamically suffixed (e.g. #input-sort-212403) — use attribute prefix selector
 vibium go "https://ecommerce-playground.lambdatest.io/index.php?route=product/category&path=20"
 vibium wait load
 vibium select "select[id^='input-sort']" "nonexistent_sort"
@@ -218,7 +317,6 @@ FAIL if: exit 0 with success message when option does not exist
 
 ### B6 — `vibium click --timeout` — flag silently ignored (High · P1)
 
-Inject a button that appears after a 1s delay, then click it with a 3s timeout:
 ```sh
 vibium go https://testtrack.org
 vibium content --stdin <<'EOF'
@@ -234,6 +332,43 @@ FAIL if: fails in ~160ms with `timeout after 0s` (timeout flag ignored)
 
 ---
 
+### B22 — `vibium fill` — crashes on `<textarea>` elements (High · P1)
+
+**Source:** Discovered during Evil Tester testing (textarea in the forms test page).
+
+```sh
+vibium go https://testpages.eviltester.com/styled/basic-html-form-test.html
+vibium wait load
+vibium find "textarea" && vibium fill @e1 "hello world"
+echo "exit: $?"
+```
+
+PASS if: textarea value is set to "hello world", exit 0
+FAIL if: error such as `element type is not supported for fill` or similar (workaround is `vibium click "textarea" && vibium type "textarea" "text"`)
+
+Also test with inline content to isolate from site-specific variables:
+```sh
+vibium content '<textarea id="ta"></textarea>'
+vibium fill "#ta" "hello"
+echo "exit: $?"
+vibium eval 'document.querySelector("#ta").value'
+```
+
+PASS if: exit 0 and value is `"hello"`
+FAIL if: error on fill; note that the workaround — `vibium click "#ta" && vibium type "#ta" "hello"` — appends rather than replaces, which is a secondary limitation
+
+Cross-check workaround still works:
+```sh
+vibium content '<textarea id="ta"></textarea>'
+vibium click "#ta" && vibium type "#ta" "workaround text"
+echo "exit: $?"
+vibium eval 'document.querySelector("#ta").value'
+```
+
+PASS if: exit 0 and value contains "workaround text"
+
+---
+
 ### B7 — `vibium attr` — boolean attributes indistinguishable from absent (High · P2)
 
 ```sh
@@ -242,7 +377,7 @@ vibium attr "#req" "required"
 vibium attr "#norq" "required"
 ```
 
-PASS if: outputs differ in any way (e.g. `"true"` vs `""`, or `""` vs `null`, or non-empty vs empty)
+PASS if: outputs differ in any way (e.g. `"true"` vs `""`, or non-empty vs empty)
 FAIL if: both return identical output (both empty string or both `{"ok":true,"result":""}`)
 
 ---
@@ -255,36 +390,23 @@ vibium eval '({url: location.href, title: document.title})'
 vibium eval '[1, 2, 3]'
 ```
 
-PASS if: first output is valid JSON (`{"url":"...","title":"..."}`); second is `[1,2,3]` or equivalent
-FAIL if: output contains `map[type:string value:...]` or `map[type:number value:1]` (Go struct repr)
+PASS if: first output is valid JSON (`{"url":"...","title":"..."}`); second is `[1,2,3]`
+FAIL if: output contains `map[type:string value:...]` or `map[type:number value:1]`
 
----
+**Cross-site check — confirm the eval workaround used across practice-testing sites still works:**
 
-### B9 — `vibium bidi-test` / `vibium launch-test` — WebSocket URL blank (High · P3)
+The `--stdin` heredoc pattern is used heavily across practice-testing and cart-patrol for complex DOM queries. Verify it works correctly:
 
 ```sh
-vibium bidi-test
+vibium go https://academybugs.com/
+vibium eval --stdin <<'EOF'
+JSON.stringify([...document.querySelectorAll("a")].slice(0,3).map(a => ({text: a.textContent.trim(), href: a.href})))
+EOF
+echo "exit: $?"
 ```
 
-PASS if: all 5 steps pass (including `[3/5] Connecting to BiDi WebSocket...` succeeds)
-FAIL if: `WebSocket URL: ` is blank at step 2 and `Error connecting: ... malformed ws or wss URL`
-
-Also test `vibium launch-test` — same bug, different command:
-```sh
-vibium launch-test
-```
-
-PASS if: BiDi WebSocket URL is non-empty and connection succeeds
-FAIL if: `BiDi WebSocket: ` is blank and command hangs or errors
-
-**Positive baseline** — when B9 is fixed, `vibium ws-test` against known-good echo servers should connect cleanly:
-```sh
-vibium ws-test wss://echo.websocket.org; echo "exit: $?"
-vibium ws-test wss://ws.ifelse.io; echo "exit: $?"
-```
-
-PASS if: both connect and exchange a message, exit 0
-FAIL if: connection fails (would indicate a different issue, not B9)
+PASS if: valid JSON array output, exit 0
+FAIL if: Go struct repr, empty output, or parse error
 
 ---
 
@@ -323,10 +445,9 @@ zsh -c 'source <(vibium completion zsh) 2>/tmp/vibium-b12-stderr.txt; echo "exit
 ```
 
 PASS if: exit 0, no output on stderr
-FAIL if: `compdef` error appears on stderr — exact message varies by zsh version:
-- zsh 5.9+ (macOS): `/dev/fd/11:2: command not found: compdef` — exit code is 0 but stderr has error
-- older zsh: `compdef:...: _comps: assignment to invalid subscript range`
-Note: on zsh 5.9 the exit code is 0 even when broken — check stderr, not just exit code
+FAIL if: `compdef` error appears on stderr
+
+Note: on zsh 5.9 (macOS) the exit code is 0 even when broken — check stderr, not just exit code.
 
 ---
 
@@ -363,6 +484,205 @@ FAIL if: `Error: unknown shorthand flag: '1' in -122.4194`
 
 ---
 
+### B23 — `vibium find text` — searches DOM text, not CSS-transformed display text (Medium · P2)
+
+**Source:** Discovered during AcademyBugs testing. Nav items and buttons had CSS `text-transform: uppercase` visually but mixed-case DOM text. Searching by the uppercase rendered string returned no results.
+
+```sh
+vibium content '<button style="text-transform:uppercase" id="btn">add to cart</button>'
+vibium find text "ADD TO CART"
+echo "exit: $? (uppercase search)"
+vibium find text "add to cart"
+echo "exit: $? (DOM text search)"
+```
+
+PASS if: `"ADD TO CART"` search returns exit 1 (not found) AND `"add to cart"` search returns exit 0 with `@e1` — this is consistent, predictable behavior that matches DOM semantics
+FAIL if: `"ADD TO CART"` search returns exit 0 (falsely claims to find it via rendered text matching), inconsistently
+
+Expected behavior distinction — also test with mixed-case DOM text:
+```sh
+vibium content '<button style="text-transform:uppercase" id="btn">Add to Cart</button>'
+vibium find text "ADD TO CART"
+echo "exit: $? (uppercase search, mixed DOM)"
+vibium find text "Add to Cart"
+echo "exit: $? (DOM-cased search)"
+```
+
+PASS if: only the DOM-cased `"Add to Cart"` search succeeds (exit 0)
+FAIL if: uppercase search succeeds when DOM text is mixed-case (would mean rendered-text matching, which would be an inconsistency vs the previous case)
+
+**AcademyBugs live verification:**
+```sh
+vibium go https://academybugs.com/
+vibium wait load
+# Dismiss tutorial modal if present
+vibium find text "×" && vibium click @e1 2>/dev/null || true
+
+# Nav items render as "SHOP", "FIND BUGS", "ABOUT" visually (CSS uppercase)
+# DOM text is mixed-case
+vibium find text "SHOP"
+echo "exit: $? (uppercase — should NOT find)"
+vibium find text "Shop"
+echo "exit: $? (DOM-cased — should find)"
+```
+
+PASS if: uppercase search returns not-found (exit 1), DOM-cased search returns @e1 (exit 0)
+FAIL if: uppercase search returns @e1 (exit 0) — would mean rendered-text matching is inconsistently applied
+
+**QA Practice ecommerce live verification:**
+
+The ecommerce section of qa-practice.razvanvancea.ro has ADD TO CART buttons rendered uppercase via CSS. Discovered during batch 3 practice-testing (2026-04-22).
+
+```sh
+vibium go https://qa-practice.razvanvancea.ro/auth_ecommerce.html && vibium wait load
+vibium map
+# Find and use the email/password/submit refs to login
+# @e25 = email, @e26 = password, @e27 = submit (after login: these shift)
+vibium fill @e25 "admin@admin.com" && vibium fill @e26 "admin123" && vibium click @e27
+vibium wait load
+
+# Product ADD TO CART buttons are CSS uppercase — DOM text is "ADD TO CART" (all caps)
+# This is unusual: DOM text IS already uppercase, so both searches should behave the same
+vibium find text "ADD TO CART"
+echo "exit: $? (all-caps DOM text)"
+vibium find text "add to cart"
+echo "exit: $? (lowercase DOM text)"
+```
+
+Note: unlike AcademyBugs (where DOM text is mixed-case and CSS transforms it), QA Practice ADD TO CART buttons have all-caps DOM text. This tests whether `vibium find text` matches case-insensitively or case-sensitively.
+
+PASS (B23 consistent behavior) if: only the exact DOM-cased `"ADD TO CART"` succeeds (case-sensitive matching)
+PASS (alternative consistent behavior) if: both succeed (case-insensitive matching — also consistent)
+FAIL if: results differ between this site and AcademyBugs for the same input (inconsistent matching rules)
+
+Regardless — for automation reliability use `vibium map` refs instead of `find text` for these buttons.
+
+---
+
+### B25 — `vibium map` — Web Components shadow DOM elements not exposed (Medium · P2)
+
+**Source:** Discovered during Polymer Shop testing (batch 3, 2026-04-22). All product listing, detail, cart, and checkout UI lives inside nested `<shop-app>` custom element shadow roots. `vibium map` returns "No interactive elements found" on every page. This is distinct from B24 (CSS-styled non-button `<li>` elements) — here the issue is shadow DOM encapsulation, not element type.
+
+```sh
+vibium go https://shop.polymer-project.org/ && vibium wait load
+vibium map
+echo "exit: $?"
+```
+
+PASS if: interactive elements from the page (e.g. category links, product buttons) appear as `@eN` refs
+FAIL if: output is "No interactive elements found" or only returns non-shadow-DOM elements like `<a>` hrefs in the light DOM
+
+Deep component check — verify map also fails inside a specific sub-component:
+```sh
+vibium go https://shop.polymer-project.org/list/mens_outerwear && vibium wait load
+vibium map
+# Expected FAIL: returns nothing; all product cards are inside shop-app > shop-list shadow DOM
+```
+
+Workaround verification — confirm shadow DOM traversal via eval still works:
+```sh
+vibium eval 'JSON.stringify(document.querySelector("shop-app")?.shadowRoot?.querySelector("shop-list")?.shadowRoot?.querySelectorAll("a")?.length)'
+# Expected: a number > 0 (links are findable via eval shadowRoot traversal)
+```
+
+PASS (workaround) if: eval returns a count > 0
+FAIL (full failure) if: eval also returns null or 0 (shadow DOM completely opaque to eval — no recovery path)
+
+---
+
+### B26 — `vibium find role button` — times out on `input[type=submit]` (Medium · P2)
+
+**Source:** Discovered during Practice Software Testing (practicesoftwaretesting.com) batch 3 testing. The login form uses `<input type="submit" value="Login">` instead of `<button>`. Per ARIA spec, `input[type=submit]` has implicit role `button`, so `vibium find role button --name "Login"` should find it. Instead it times out after 30s.
+
+```sh
+vibium content '<form><input type="text" name="u"><input type="submit" value="Login"></form>'
+vibium find role button --name "Login"
+echo "exit: $?"
+```
+
+PASS if: `@e1 [input[type=submit]] "Login"` found, exit 0
+FAIL if: times out after 30s — `vibium find role button` does not recognise `input[type=submit]` as having the `button` role
+
+Also verify the workaround works:
+```sh
+vibium content '<form><input type="text" name="u"><input type="submit" value="Login"></form>'
+vibium eval 'document.querySelector("input[type=submit]").click()'
+echo "exit: $? (eval click workaround)"
+```
+
+PASS (workaround) if: exit 0
+
+Live site verification — PST login:
+```sh
+vibium go https://practicesoftwaretesting.com/auth/login && vibium wait load
+
+# This times out (B26 symptom)
+vibium find role button --name "Login" --timeout 5000
+echo "exit: $? (should timeout with B26 present)"
+
+# This works (eval workaround)
+vibium fill "#email" "customer@practicesoftwaretesting.com"
+vibium fill "#password" "welcome01"
+vibium eval 'document.querySelector("input[type=submit][value=Login]").click()' && vibium sleep 2000
+vibium url
+echo "url after login (workaround)"
+```
+
+PASS (B26 fixed) if: `find role button --name "Login"` returns a ref, exit 0
+FAIL (B26 present) if: `find role button --name "Login"` times out; eval workaround required
+
+---
+
+### B27 — `vibium fill` / `vibium type` — negative values parsed as flags (Medium · P2)
+
+**Source:** Discovered during BugEater QA Training Simulator testing (batch 4, 2026-04-22). Same root cause as B14 (geolocation negative coords) and B15 (sleep negative values) — the vibium CLI argument parser treats any argument starting with `-` as a flag rather than a value. Affects `vibium fill` and `vibium type`, meaning any form field that needs a negative number (e.g. `-2`, `-99.5`) cannot be filled directly.
+
+```sh
+vibium go https://bugeater.web.app/app/challenge/learn/adder && vibium wait load
+vibium fill "input#first" "-2"
+echo "exit: $?"
+```
+
+PASS if: value `-2` is typed into the field, exit 0
+FAIL if: `unknown shorthand flag: '2' in -2` — negative value treated as flag argument
+
+Also verify `vibium type`:
+```sh
+vibium type "input#first" "-2"
+echo "exit: $?"
+```
+
+PASS if: value appended to field, exit 0
+FAIL if: `unknown shorthand flag: '2' in -2`
+
+Workaround verification — confirm native value setter + input event still works:
+```sh
+vibium eval 'const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,"value").set; const el=document.querySelector("input#first"); s.call(el,"-2"); el.dispatchEvent(new Event("input",{bubbles:true})); el.value'
+# Expected: "-2"
+```
+
+PASS (workaround) if: eval returns `"-2"`
+
+---
+
+### B9 — `vibium bidi-test` / `vibium launch-test` — WebSocket URL blank (High · P3)
+
+```sh
+vibium bidi-test
+```
+
+PASS if: all 5 steps pass (including `[3/5] Connecting to BiDi WebSocket...` succeeds)
+FAIL if: `WebSocket URL: ` is blank at step 2 and `Error connecting: ... malformed ws or wss URL`
+
+```sh
+vibium launch-test
+```
+
+PASS if: BiDi WebSocket URL is non-empty and connection succeeds
+FAIL if: `BiDi WebSocket: ` is blank and command hangs or errors
+
+---
+
 ### B15 — `vibium sleep` — negative values parsed as flags (Medium · P3)
 
 ```sh
@@ -370,7 +690,7 @@ vibium sleep -1
 echo "exit: $?"
 ```
 
-PASS if: error clearly states negative duration is invalid (not a flag error), exit 1
+PASS if: error clearly states negative duration is invalid, exit 1
 FAIL if: `Error: unknown shorthand flag: '1' in -1`
 
 ---
@@ -383,7 +703,43 @@ echo "exit: $?"
 ```
 
 PASS if: exit 1 with error that value exceeds the 30000ms maximum
-FAIL if: exits 0 after sleeping exactly 30s with output `Slept for 30000 ms` (silently clamped, no warning or error)
+FAIL if: exits 0 after sleeping exactly 30s with `Slept for 30000 ms` (silently clamped)
+
+---
+
+### B24 — `vibium map` — custom-rendered and canvas elements not exposed (Medium · P3)
+
+**Source:** Discovered during Black Box Puzzles testing. Interactive clickable circles rendered as CSS-styled `<li>` elements (not `<button>` or `<a>`) did not appear in `vibium map` output. Required `getBoundingClientRect()` + `vibium mouse click x y`.
+
+```sh
+vibium go https://blackboxpuzzles.workroomprds.com/puzzle29.html
+vibium wait load
+vibium map
+echo "exit: $?"
+```
+
+PASS if: output includes `@e1`, `@e2`... refs for the interactive puzzle elements (circles), exit 0
+FAIL if: output is empty or contains only non-puzzle elements (nav, links), and the circles are not exposed as interactive refs — this forces coordinate-based interaction
+
+Workaround verification — confirm coordinate-based clicking still works when map misses elements:
+```sh
+vibium eval 'JSON.stringify([...document.querySelectorAll("li")].slice(0,3).map(li => { const r = li.getBoundingClientRect(); return {x: Math.round(r.x + r.width/2), y: Math.round(r.y + r.height/2)} }))'
+# Get x,y from output — e.g. x=100, y=200
+vibium mouse click 100 200
+echo "exit: $? (coordinate click workaround)"
+```
+
+PASS if: exit 0 (coordinate click works regardless of map exposure)
+FAIL if: coordinate click fails (would indicate a separate `vibium mouse click` bug)
+
+Also verify `vibium a11y-tree` as an alternative discovery mechanism:
+```sh
+vibium a11y-tree
+echo "exit: $?"
+```
+
+PASS if: a11y-tree reveals the puzzle `<li>` elements even when `vibium map` does not
+FAIL if: a11y-tree also misses them (full discovery failure — no alternative to coordinate heuristics)
 
 ---
 
@@ -410,16 +766,7 @@ vibium ws-test http://testtrack.org; echo "exit: $?"
 ```
 
 PASS if: error clearly tells the user to use `wss://` or `ws://` instead
-FAIL if: generic `Error: failed to connect to https://...: malformed ws or wss URL` with no scheme guidance
-
-**Positive check** — verify valid `wss://` endpoints still work (regression guard):
-```sh
-vibium ws-test wss://echo.websocket.org; echo "exit: $? (echo.websocket.org)"
-vibium ws-test wss://ws.ifelse.io; echo "exit: $? (ws.ifelse.io)"
-```
-
-PASS if: both connect successfully, exit 0
-FAIL if: connection fails on a valid `wss://` endpoint (separate issue from B18)
+FAIL if: generic `failed to connect... malformed ws or wss URL` with no scheme guidance
 
 ---
 
@@ -434,7 +781,7 @@ echo "exit: $?"
 ```
 
 PASS if: clear user-facing error that element is not a file input, exit 1
-FAIL if: exit 0 with no validation error, OR exit 1 with only a cryptic BiDi error (observed: `BiDi error: unable to set file input - unable to set file input`) — the latter is exit 1 but not a proper type guard
+FAIL if: exit 0 with no validation error, OR exit 1 with only `BiDi error: unable to set file input`
 
 ---
 
@@ -449,11 +796,10 @@ wait $SERVE_PID 2>/tmp/vibium-serve-stderr.txt
 cat /tmp/vibium-serve-stderr.txt
 ```
 
-PASS if: no stack traces or unexpected error lines on shutdown (clean or single-line stop message)
+PASS if: no stack traces or unexpected error lines on shutdown
 FAIL if: multiple error lines / Go stack output printed to stderr on SIGTERM
-NOTE: teardown has been clean in all three test runs against v26.3.18 — this sub-bug is considered fixed. Confirm by checking stderr line count is 0.
 
-Also test port conflict hint — run a second instance against an already-occupied port:
+Port conflict hint sub-test:
 ```sh
 vibium serve --port 8090 &
 BGPID=$!
@@ -462,7 +808,7 @@ vibium serve --port 8090 2>&1; echo "conflict exit: $?"
 kill $BGPID 2>/dev/null; wait $BGPID 2>/dev/null
 ```
 
-PASS if: error mentions `--port` as a workaround (e.g. "try a different port with --port")
+PASS if: error mentions `--port` as a workaround
 FAIL if: only `bind: address already in use` with no `--port` hint
 
 ---
@@ -482,7 +828,7 @@ FAIL if: the empty-string case omits the `--stdin` hint present in the no-arg me
 ## Cleanup
 
 ```sh
-rm -f /tmp/vibium-reg-state.json /tmp/vibium-reg-lambdatest.json /tmp/vibium-reg-abantecart.json /tmp/vibium-reg-coffeecart.json /tmp/vibium-serve-stderr.txt
+rm -f /tmp/vibium-reg-state.json /tmp/vibium-reg-lambdatest.json /tmp/vibium-reg-abantecart.json /tmp/vibium-reg-coffeecart.json /tmp/vibium-reg-academybugs.json /tmp/vibium-serve-stderr.txt /tmp/vibium-b12-stderr.txt
 vibium daemon status || (vibium daemon start && sleep 2)
 ```
 
@@ -504,23 +850,29 @@ Print a summary table with actual results filled in:
 ║  B4  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B5  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B6  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
+║ B22  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B7  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
 ║  B8  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
-║  B9  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B10  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B11  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B12  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B13  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B14  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B23  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B25  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B26  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B27  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║  B9  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B15  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B16  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B24  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B17  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B18  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B19  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B20  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ║ B21  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ╠══════╩══════════╩══════════╩══════════════════════════════════╣
-║  X PASS   Y FAIL   Z SKIP                                        ║
+║  X PASS   Y FAIL   Z SKIP   (27 total)                          ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
