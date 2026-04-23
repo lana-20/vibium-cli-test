@@ -5,7 +5,7 @@ description: Regression test suite for 27 known vibium CLI bugs (B1–B27), orde
 
 # vibium CLI Regression Test Suite
 
-Run all 27 tests and produce a final summary table. Each test maps to a bug in `/Users/lanabegunova/vibium-bug-report.md`. Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B27 are P4.
+Run all 27 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B27 are P4.
 
 ## Setup
 
