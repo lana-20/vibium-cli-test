@@ -77,7 +77,7 @@ B3 has three confirmed trigger patterns. All deadlock the daemon socket:
 
 1. **JS alert/confirm/prompt dialogs** — original repro: `vibium click` on any button that calls `window.alert()`. Workaround: pre-stub via `vibium eval 'window.alert = () => {}'` before clicking.
 2. **Form POST navigation** — clicking a submit button that triggers a server-side POST request and full page reload (PHP Travels demo form). Pre-stubbing dialogs does not help. Workaround: `vibium eval 'form.submit()'` or avoid clicking submit buttons that cause server navigation.
-3. **In-iframe nav link clicks** — clicking category nav links inside a Presta Shop inner subdomain causes full page navigation the daemon cannot track. Workaround: use `vibium go <direct-url>` instead of clicking nav links.
+3. **PrestaShop subdomain page navigation** — any full-page navigation within a PrestaShop inner subdomain deadlocks the socket. This includes both `vibium click` on nav links AND `vibium go` to subdomain pages — the trigger is the navigation event itself, not the mechanism. Confirmed triggers: nav link clicks, `vibium go "$INNER/product-page.html"`. Workaround: `vibium eval 'location.href = "..."'` + `vibium wait load` (the only approach that does not deadlock).
 
 ## B16 vs B22 — shadow DOM vs non-interactive elements
 
@@ -120,6 +120,12 @@ Each `FAIL` includes the exact error string observed and notes whether the sympt
 
 vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
 
+## Candidate bugs (observed, not yet formally verified as standalone entries)
+
+| # | Command | Symptom | Discovered |
+|---|---------|---------|------------|
+| B28 candidate | `vibium click @ref` | Map ref click on a `disabled` element exits 0 and prints "Clicked element: ..." with no error, while `vibium click "[css-selector]"` on the same element fails with "enabled check failed — disabled attribute". Inconsistent enabled-check enforcement between ref-based and selector-based clicks — causes false positives. | 2026-04-25 PrestaShop add-to-cart button (`[data-button-action=add-to-cart]`, `disabled=true`) |
+
 ## Changelog
 
 | Date | Change |
@@ -127,3 +133,4 @@ vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
 | 2026-04-22 | Added B7, B15, B22 (fill/textarea, find text/CSS transform, map/non-semantic) from batch 1–2 practice-testing |
 | 2026-04-22 | Added B16–B17 (map/shadow DOM, find role/input[type=submit]) from batch 3; expanded B3 cross-site checks; expanded B1/B2/B4/B5/B9 cross-site coverage |
 | 2026-04-22 | Added B18 (fill/type reject negative values) from batch 4 BugEater testing; added 5 new cross-site entries (bugeater.web.app, randomuser.me, codebase.show, thelab.boozang.com, compendiumdev.co.uk) |
+| 2026-04-25 | Corrected B3 PrestaShop trigger: `vibium go` to subdomain pages also deadlocks (not just nav link clicks); corrected workaround from `vibium go direct-url` to `eval location.href`; added B28 candidate (`vibium click @ref` bypasses disabled check) |

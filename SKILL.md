@@ -180,22 +180,32 @@ Recovery if deadlocked:
 pkill -f vibium && sleep 2 && vibium daemon start && sleep 2
 ```
 
-**Cross-site check — Presta Shop inner-store nav links deadlock daemon:**
+**Cross-site check — Presta Shop subdomain page navigation deadlocks daemon:**
 
-Clicking category nav links (Clothes, Accessories, Art) inside a Presta Shop inner subdomain triggers full-page navigation that the daemon socket cannot track. Symptom is the same as B3 — command hangs until i/o timeout.
+Any full-page navigation within a PrestaShop inner subdomain deadlocks the daemon socket — this includes both `vibium click` on nav links AND `vibium go` to subdomain pages. The trigger is the navigation event itself, not the mechanism used. Symptom is the same as B3 — command hangs until i/o timeout.
 
 ```sh
-vibium go https://demo.prestashop.com/ && vibium sleep 4000
+vibium go https://demo.prestashop.com/ && vibium wait load && vibium sleep 5000
 INNER=$(vibium eval 'document.querySelector("#framelive")?.src')
-vibium go "$INNER" && vibium wait load
+vibium go "$INNER" && vibium wait load  # homepage only — safe
 
-# Attempt to click a category nav link directly (should deadlock if B3 applies to navigation)
+# Trigger 1: clicking a category nav link (original trigger)
 vibium find text "Clothes" && vibium click @e1
-echo "exit: $? (prestashop-nav-clothes)"
+echo "exit: $? (prestashop-nav-click-clothes)"
+# If this hangs, restart daemon before testing trigger 2
+
+# Trigger 2: vibium go to a subdomain product page (also deadlocks — confirmed 2026-04-25)
+vibium go "$INNER/1-1-hummingbird-printed-t-shirt.html"
+echo "exit: $? (prestashop-vibium-go-product)"
 ```
 
-PASS if: click navigates correctly and returns; `vibium url` shows `/en/3-clothes`
-FAIL if: command hangs — daemon deadlocked by nav; workaround is `vibium go "$INNER/en/3-clothes"` (direct URL navigation bypasses the deadlock)
+PASS if: both navigate correctly and return; daemon stays responsive
+FAIL if: either command hangs — daemon deadlocked; real workaround is `eval 'location.href = "..."'` + `vibium wait load` (NOT `vibium go` to a subdomain page — that also deadlocks):
+```sh
+# Correct workaround — confirmed working 2026-04-25:
+vibium eval "location.href = '${INNER}/1-1-hummingbird-printed-t-shirt.html'"
+vibium wait load --timeout 10000
+```
 
 Also verify the pre-stub values are observed:
 ```sh
