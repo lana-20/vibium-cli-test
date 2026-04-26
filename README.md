@@ -2,7 +2,7 @@
 
 A Claude Code skill that runs a full regression suite against [vibium](https://www.npmjs.com/package/vibium) — a browser automation CLI built on WebDriver BiDi.
 
-The suite covers **27 confirmed bugs** in vibium v26.3.18, verified across 17 sites. Each test maps to a documented bug, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
+The suite covers **28 confirmed bugs** in vibium v26.3.18, verified across 17 sites. Each test maps to a documented bug, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
 
 ## Usage
 
@@ -12,7 +12,7 @@ Install the skill via Claude Code, then run:
 /vibium-cli-test
 ```
 
-Claude will execute all 27 tests against the running vibium daemon and print a summary table.
+Claude will execute all 28 tests against the running vibium daemon and print a summary table.
 
 ## What it tests
 
@@ -45,6 +45,7 @@ Claude will execute all 27 tests against the running vibium daemon and print a s
 | B25 | Low | P3 | `vibium upload` | No element type guard |
 | B26 | Low | P4 | `vibium serve` | No `--port` hint on port conflict |
 | B27 | Low | P4 | `vibium content ""` | Inconsistent error message vs no-arg invocation |
+| B28 | Low | P3 | `vibium find` | CSS selector and some find modes return @ref for disabled elements (exit 0); `vibium map` correctly excludes them |
 
 ## Cross-site coverage
 
@@ -120,11 +121,40 @@ Each `FAIL` includes the exact error string observed and notes whether the sympt
 
 vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
 
-## Candidate bugs (observed, not yet formally verified as standalone entries)
+## B28 — `vibium find` over-includes disabled elements
 
-| # | Command | Symptom | Status |
-|---|---------|---------|--------|
-| B28 candidate | `vibium map` / `vibium find` | `vibium map` excludes disabled elements entirely (no @ref assigned). `vibium find` returns an @ref for disabled elements (exit 0). Clicking via either @ref or selector correctly fails with "enabled check failed — disabled attribute" in both cases — the enabled check is consistent. The discrepancy is `vibium find` exposing a ref that cannot be acted upon, while `vibium map` suppresses it. Observed 2026-04-25; original PrestaShop observation (click @ref succeeded) was a timing artifact — button was genuinely still enabled at click time; the AJAX failure was unrelated to disabled state. | Narrowed — not a click inconsistency; possible `vibium find` over-inclusion of disabled elements worth tracking separately |
+`vibium map` consistently excludes disabled elements (no @ref assigned). `vibium find` returns an @ref for disabled elements in several modes (exit 0). Click on any leaked @ref always fails with "enabled check failed — disabled attribute" — the action layer is correct. The bug is that `find` leaks an @ref for an element the user cannot act on, while `map` does not.
+
+### Find mode behavior matrix
+
+Tested across three element types (`<button disabled>`, `<input type="submit" disabled>`, `<input type="text" disabled>`) injected on testtrack.org, plus a real disabled `<input type="button">` on Basic Calculator.
+
+| Find mode | `<button>` | `<input type="submit">` | `<input type="text">` |
+|-----------|------------|-------------------------|------------------------|
+| `find "<selector>"` (CSS) | LEAKS @ref (exit 0) | LEAKS @ref (exit 0) | LEAKS @ref (exit 0) |
+| `find text "<text>"` | LEAKS @ref (exit 0) | blocked (exit 1) | — |
+| `find placeholder "<text>"` | — | — | LEAKS @ref (exit 0) |
+| `find role <role>` | LEAKS @ref (exit 0) | blocked (exit 1) | blocked (exit 1) |
+| `vibium map` | excluded (exit 0) | excluded (exit 0) | excluded (exit 0) |
+| `click @leaked-ref` | FAIL exit 1 | FAIL exit 1 | FAIL exit 1 |
+
+**Pattern**: CSS selector mode (`find "<selector>"`) leaks for all element types. `find text` and `find role` leak for `<button>` but not for `<input>` types. `find placeholder` leaks for text inputs. `vibium map` is always consistent.
+
+### Repro
+
+```sh
+# Inject a disabled button
+vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=b28 disabled>Disabled</button>")'
+
+# find by selector — exits 0, returns @ref (bug)
+vibium find "#b28"   # → @e1 [button] "Disabled", exit 0
+
+# map — exits 0, no ref returned (correct)
+vibium map --selector "#b28"  # → No interactive elements found
+
+# click the leaked ref — exits 1, error (enabled check works correctly)
+vibium click @e1  # → Error: enabled check failed — disabled attribute
+```
 
 ## Changelog
 
@@ -135,3 +165,4 @@ vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
 | 2026-04-22 | Added B18 (fill/type reject negative values) from batch 4 BugEater testing; added 5 new cross-site entries (bugeater.web.app, randomuser.me, codebase.show, thelab.boozang.com, compendiumdev.co.uk) |
 | 2026-04-25 | Corrected B3 PrestaShop trigger: `vibium go` to subdomain pages also deadlocks (not just nav link clicks); corrected workaround from `vibium go direct-url` to `eval location.href`; added B28 candidate (`vibium click @ref` bypasses disabled check) |
 | 2026-04-25 | Hardened B28 candidate across 3 sites (Basic Calculator `input[type=button]`, testtrack.org injected `button`, vibium find ref): enabled check enforced consistently in all cases — original PrestaShop observation was timing artifact; B28 narrowed to `vibium find` over-inclusion of disabled elements (returns @ref, click still fails) |
+| 2026-04-25 | Promoted B28 to confirmed bug: completed full find-mode × element-type matrix (3 injected types × 5 find modes); CSS selector mode leaks for all types; `find text`/`find role` leak for `<button>` only; `vibium map` always correct; click always fails |
