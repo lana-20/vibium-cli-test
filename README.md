@@ -122,9 +122,9 @@ vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
 
 ## Candidate bugs (observed, not yet formally verified as standalone entries)
 
-| # | Command | Symptom | Discovered |
-|---|---------|---------|------------|
-| B28 candidate | `vibium click @ref` | Map ref click on a `disabled` element exits 0 and prints "Clicked element: ..." with no error, while `vibium click "[css-selector]"` on the same element fails with "enabled check failed — disabled attribute". Inconsistent enabled-check enforcement between ref-based and selector-based clicks — causes false positives. | 2026-04-25 PrestaShop add-to-cart button (`[data-button-action=add-to-cart]`, `disabled=true`) |
+| # | Command | Symptom | Status |
+|---|---------|---------|--------|
+| B28 candidate | `vibium map` / `vibium find` | `vibium map` excludes disabled elements entirely (no @ref assigned). `vibium find` returns an @ref for disabled elements (exit 0). Clicking via either @ref or selector correctly fails with "enabled check failed — disabled attribute" in both cases — the enabled check is consistent. The discrepancy is `vibium find` exposing a ref that cannot be acted upon, while `vibium map` suppresses it. Observed 2026-04-25; original PrestaShop observation (click @ref succeeded) was a timing artifact — button was genuinely still enabled at click time; the AJAX failure was unrelated to disabled state. | Narrowed — not a click inconsistency; possible `vibium find` over-inclusion of disabled elements worth tracking separately |
 
 ## Changelog
 
@@ -134,3 +134,4 @@ vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
 | 2026-04-22 | Added B16–B17 (map/shadow DOM, find role/input[type=submit]) from batch 3; expanded B3 cross-site checks; expanded B1/B2/B4/B5/B9 cross-site coverage |
 | 2026-04-22 | Added B18 (fill/type reject negative values) from batch 4 BugEater testing; added 5 new cross-site entries (bugeater.web.app, randomuser.me, codebase.show, thelab.boozang.com, compendiumdev.co.uk) |
 | 2026-04-25 | Corrected B3 PrestaShop trigger: `vibium go` to subdomain pages also deadlocks (not just nav link clicks); corrected workaround from `vibium go direct-url` to `eval location.href`; added B28 candidate (`vibium click @ref` bypasses disabled check) |
+| 2026-04-25 | Hardened B28 candidate across 3 sites (Basic Calculator `input[type=button]`, testtrack.org injected `button`, vibium find ref): enabled check enforced consistently in all cases — original PrestaShop observation was timing artifact; B28 narrowed to `vibium find` over-inclusion of disabled elements (returns @ref, click still fails) |
