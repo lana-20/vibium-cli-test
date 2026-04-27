@@ -43,9 +43,9 @@ Claude will execute all 28 tests against the running vibium daemon and print a s
 | B23 | Low | P3 | `vibium check` | No element type guard |
 | B24 | Low | P3 | `vibium ws-test` | `http://`/`https://` scheme not caught at input |
 | B25 | Low | P3 | `vibium upload` | No element type guard |
-| B26 | Low | P4 | `vibium serve` | No `--port` hint on port conflict |
-| B27 | Low | P4 | `vibium content ""` | Inconsistent error message vs no-arg invocation |
-| B28 | Low | P3 | `vibium find` | CSS selector and some find modes return @ref for disabled elements (exit 0); `vibium map` correctly excludes them |
+| B26 | Low | P3 | `vibium find` | CSS selector and some find modes return @ref for disabled elements (exit 0); `vibium map` correctly excludes them |
+| B27 | Low | P4 | `vibium serve` | No `--port` hint on port conflict |
+| B28 | Low | P4 | `vibium content ""` | Inconsistent error message vs no-arg invocation |
 
 ## Cross-site coverage
 
@@ -121,7 +121,7 @@ Each `FAIL` includes the exact error string observed and notes whether the sympt
 
 vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
 
-## B28 — `vibium find` over-includes disabled elements
+## B26 — `vibium find` over-includes disabled elements
 
 `vibium map` consistently excludes disabled elements (no @ref assigned). `vibium find` returns an @ref for disabled elements in several modes (exit 0). Click on any leaked @ref always fails with "enabled check failed — disabled attribute" — the action layer is correct. The bug is that `find` leaks an @ref for an element the user cannot act on, while `map` does not.
 
@@ -144,13 +144,13 @@ Tested across three element types (`<button disabled>`, `<input type="submit" di
 
 ```sh
 # Inject a disabled button
-vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=b28 disabled>Disabled</button>")'
+vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=b26 disabled>Disabled</button>")'
 
 # find by selector — exits 0, returns @ref (bug)
-vibium find "#b28"   # → @e1 [button] "Disabled", exit 0
+vibium find "#b26"   # → @e1 [button] "Disabled", exit 0
 
 # map — exits 0, no ref returned (correct)
-vibium map --selector "#b28"  # → No interactive elements found
+vibium map --selector "#b26"  # → No interactive elements found
 
 # click the leaked ref — exits 1, error (enabled check works correctly)
 vibium click @e1  # → Error: enabled check failed — disabled attribute
@@ -163,6 +163,6 @@ vibium click @e1  # → Error: enabled check failed — disabled attribute
 | 2026-04-22 | Added B7, B15, B22 (fill/textarea, find text/CSS transform, map/non-semantic) from batch 1–2 practice-testing |
 | 2026-04-22 | Added B16–B17 (map/shadow DOM, find role/input[type=submit]) from batch 3; expanded B3 cross-site checks; expanded B1/B2/B4/B5/B9 cross-site coverage |
 | 2026-04-22 | Added B18 (fill/type reject negative values) from batch 4 BugEater testing; added 5 new cross-site entries (bugeater.web.app, randomuser.me, codebase.show, thelab.boozang.com, compendiumdev.co.uk) |
-| 2026-04-25 | Corrected B3 PrestaShop trigger: `vibium go` to subdomain pages also deadlocks (not just nav link clicks); corrected workaround from `vibium go direct-url` to `eval location.href`; added B28 candidate (`vibium click @ref` bypasses disabled check) |
-| 2026-04-25 | Hardened B28 candidate across 3 sites (Basic Calculator `input[type=button]`, testtrack.org injected `button`, vibium find ref): enabled check enforced consistently in all cases — original PrestaShop observation was timing artifact; B28 narrowed to `vibium find` over-inclusion of disabled elements (returns @ref, click still fails) |
-| 2026-04-25 | Promoted B28 to confirmed bug: completed full find-mode × element-type matrix (3 injected types × 5 find modes); CSS selector mode leaks for all types; `find text`/`find role` leak for `<button>` only; `vibium map` always correct; click always fails |
+| 2026-04-25 | Corrected B3 PrestaShop trigger: `vibium go` to subdomain pages also deadlocks (not just nav link clicks); corrected workaround from `vibium go direct-url` to `eval location.href`; added B26 candidate (`vibium click @ref` bypasses disabled check) |
+| 2026-04-25 | Hardened B26 candidate across 3 sites (Basic Calculator `input[type=button]`, testtrack.org injected `button`, vibium find ref): enabled check enforced consistently in all cases — original PrestaShop observation was timing artifact; B26 narrowed to `vibium find` over-inclusion of disabled elements (returns @ref, click still fails) |
+| 2026-04-25 | Promoted B26 to confirmed bug: completed full find-mode × element-type matrix (3 injected types × 5 find modes); CSS selector mode leaks for all types; `find text`/`find role` leak for `<button>` only; `vibium map` always correct; click always fails |

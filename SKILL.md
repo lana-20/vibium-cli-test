@@ -5,7 +5,7 @@ description: Regression test suite for 28 known vibium CLI bugs (B1–B28), orde
 
 # vibium CLI Regression Test Suite
 
-Run all 28 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B28 are P4/P3.
+Run all 28 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B28 are P3/P4.
 
 ## Setup
 
@@ -795,7 +795,33 @@ FAIL if: exit 0 with no validation error, OR exit 1 with only `BiDi error: unabl
 
 ---
 
-### B26 — `vibium serve` — noisy teardown (Low · P4)
+### B26 — `vibium find` returns @ref for disabled elements (Low · P3)
+
+```sh
+# Navigate to any page and inject a disabled button
+vibium go https://testtrack.org
+vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=\"b26\" disabled>B26</button>")'
+
+# CSS selector find — should exit 1 (element disabled), actually exits 0 (bug)
+vibium find "#b26"; echo "exit:$?"
+
+# map — correctly excludes it
+vibium map --selector "#b26"
+
+# Confirm click on the leaked ref fails correctly
+vibium find "#b26" && vibium click @e1; echo "click exit:$?"
+```
+
+PASS if: `vibium find "#b26"` exits 1 (element not found / not actionable) — consistent with `vibium map`
+FAIL if: `vibium find "#b26"` exits 0 and returns an @ref for a disabled element
+
+Expected FAIL output: `@e1 [button type="button"] "B26"` (exit 0) — ref returned despite element being disabled; `vibium map --selector "#b26"` returns "No interactive elements found" (inconsistency confirmed); subsequent `vibium click @e1` exits 1 with "enabled check failed — disabled attribute"
+
+Note: CSS selector mode (`find "<selector>"`) leaks for all element types. `find text` and `find role` also leak for `<button>` but not for `<input>` types. `vibium map` always excludes disabled elements consistently.
+
+---
+
+### B27 — `vibium serve` — noisy teardown (Low · P4)
 
 ```sh
 vibium serve --port 8090 &
@@ -823,7 +849,7 @@ FAIL if: only `bind: address already in use` with no `--port` hint
 
 ---
 
-### B27 — `vibium content ""` — inconsistent error message (Low · P4)
+### B28 — `vibium content ""` — inconsistent error message (Low · P4)
 
 ```sh
 vibium content ""
@@ -832,32 +858,6 @@ vibium content
 
 PASS if: both produce the same error message, including the `--stdin` hint
 FAIL if: the empty-string case omits the `--stdin` hint present in the no-arg message
-
----
-
-### B28 — `vibium find` returns @ref for disabled elements (Low · P3)
-
-```sh
-# Navigate to any page and inject a disabled button
-vibium go https://testtrack.org
-vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=\"b28\" disabled>B28</button>")'
-
-# CSS selector find — should exit 1 (element disabled), actually exits 0 (bug)
-vibium find "#b28"; echo "exit:$?"
-
-# map — correctly excludes it
-vibium map --selector "#b28"
-
-# Confirm click on the leaked ref fails correctly
-vibium find "#b28" && vibium click @e1; echo "click exit:$?"
-```
-
-PASS if: `vibium find "#b28"` exits 1 (element not found / not actionable) — consistent with `vibium map`
-FAIL if: `vibium find "#b28"` exits 0 and returns an @ref for a disabled element
-
-Expected FAIL output: `@e1 [button type="button"] "B28"` (exit 0) — ref returned despite element being disabled; `vibium map --selector "#b28"` returns "No interactive elements found" (inconsistency confirmed); subsequent `vibium click @e1` exits 1 with "enabled check failed — disabled attribute"
-
-Note: CSS selector mode (`find "<selector>"`) leaks for all element types. `find text` and `find role` also leak for `<button>` but not for `<input>` types. `vibium map` always excludes disabled elements consistently.
 
 ---
 
@@ -905,9 +905,9 @@ Print a summary table with actual results filled in:
 ║ B23  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B24  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B25  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B26  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
+║ B26  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B27  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
-║ B28  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B28  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ╠══════╩══════════╩══════════╩══════════════════════════════════╣
 ║  X PASS   Y FAIL   Z SKIP   (28 total)                          ║
 ╚══════════════════════════════════════════════════════════════════╝
