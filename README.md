@@ -2,7 +2,7 @@
 
 A Claude Code skill that runs a full regression suite against [vibium](https://www.npmjs.com/package/vibium) — a browser automation CLI built on WebDriver BiDi.
 
-The suite covers **28 confirmed bugs** in vibium v26.3.18, verified across 17 sites. Each test maps to a documented bug, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
+The suite covers **28 confirmed bugs** in vibium v26.3.18, verified across 17 sites. Each test maps to a documented bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112), produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
 
 ## Usage
 
