@@ -5,7 +5,7 @@ description: Regression test suite for 32 known vibium CLI bugs (B1–B32), orde
 
 # vibium CLI Regression Test Suite
 
-Run all 32 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B32 are P3/P4.
+Run all 32 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B28 and B30–B32 are P3/P4. B29 is Medium P2 but was discovered late and added after B28 out of strict priority order.
 
 ## Setup
 
@@ -1040,7 +1040,7 @@ Print a summary table with actual results filled in:
 ║  B4  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B5  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B6  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
-║ B7  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
+║  B7  ║ High     ║ P1       ║ PASS / FAIL / SKIP               ║
 ║  B8  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
 ║  B9  ║ High     ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B10  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
@@ -1052,7 +1052,7 @@ Print a summary table with actual results filled in:
 ║ B16  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B17  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B18  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
-║  B19  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B19  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B20  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B21  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B22  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
