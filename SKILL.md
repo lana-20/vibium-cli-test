@@ -1,11 +1,11 @@
 ---
 name: vibium-cli-test
-description: Regression test suite for 28 known vibium CLI bugs (B1–B28), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site verification.
+description: Regression test suite for 32 known vibium CLI bugs (B1–B32), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site verification.
 ---
 
 # vibium CLI Regression Test Suite
 
-Run all 28 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B28 are P3/P4.
+Run all 32 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B6 are P1 Critical/High, B7–B18 are P1–P2 High/Medium, B19–B25 are P3, B26–B32 are P3/P4.
 
 ## Setup
 
@@ -861,6 +861,160 @@ FAIL if: the empty-string case omits the `--stdin` hint present in the no-arg me
 
 ---
 
+### B29 — `vibium frame` — context doesn't persist across CLI invocations (Medium · P2)
+
+**Source:** Discovered during The Internet `/nested_frames` testing (batch 5, 2026-04-27). `vibium frame "name"` outputs the frame info and exits 0, but subsequent CLI invocations execute in the main frame context — the daemon resets frame context between commands.
+
+```sh
+vibium go http://the-internet.herokuapp.com/nested_frames && vibium wait load
+vibium frames
+# Returns frames including frame-middle → https://the-internet.herokuapp.com/frame_middle
+
+vibium frame "frame-middle"
+echo "exit: $? (frame switch)"
+# Expected: context now set to frame-middle
+vibium eval 'document.body.textContent.trim()'
+echo "eval result (should be MIDDLE if context persisted)"
+```
+
+PASS if: `vibium frame "frame-middle"` exits 0 AND subsequent `vibium eval` returns `"MIDDLE"` (the frame body text)
+FAIL if: `vibium eval` returns frameset HTML from the main page (context not persisted; each CLI invocation resets to main frame)
+
+Also verify chained commands behave the same as separate calls:
+```sh
+vibium frame "frame-middle" && vibium eval 'document.body.textContent.trim()'
+# FAIL if: frame switch output shown but eval returns main page content
+```
+
+Workaround verification — confirm cross-frame access via eval still works:
+```sh
+vibium eval 'document.querySelector("[name=frame-middle]")?.contentDocument?.body?.textContent?.trim()'
+# Expected: "MIDDLE" (direct contentDocument access bypasses frame context requirement)
+```
+
+PASS (workaround) if: returns `"MIDDLE"`
+
+---
+
+### B30 — `vibium hover` — fails on non-interactive elements (Low · P3)
+
+**Source:** Discovered during The Internet `/hovers` testing (batch 5, 2026-04-27). `vibium hover` fails with "element not found" on CSS-styled div elements even when they are fully visible in the DOM. CSS `:hover` pseudo-class works on any visible element — `vibium hover` should not require the element to be interactive.
+
+```sh
+vibium content '<div id="hov" style="width:100px;height:100px;background:blue;"></div>'
+vibium hover "#hov"
+echo "exit: $?"
+```
+
+PASS if: exit 0 (element hovered, mouse moved to element center)
+FAIL if: `failed to hover: timeout after 0s: element not found` — non-interactive elements rejected
+
+Also verify on a styled image (another common hover target):
+```sh
+vibium content '<img id="img" src="https://placekitten.com/100/100" style="display:block">'
+vibium hover "#img"
+echo "exit: $?"
+```
+
+PASS if: exit 0
+FAIL if: "element not found" error
+
+Live site verification — The Internet `/hovers`:
+```sh
+vibium go http://the-internet.herokuapp.com/hovers && vibium wait load
+vibium hover ".figure:first-child"
+echo "exit: $? (should hover over first figure div)"
+```
+
+PASS if: exit 0, mouse moves to figure (CSS :hover triggers caption reveal)
+FAIL if: "element not found" — hover rejects non-interactive element
+
+Workaround verification — confirm `vibium mouse move x y` triggers CSS `:hover`:
+```sh
+vibium eval 'JSON.stringify(document.querySelector(".figure img")?.getBoundingClientRect())'
+# Get center coordinates from output
+vibium mouse move <cx> <cy> && vibium sleep 300
+vibium eval 'window.getComputedStyle(document.querySelector(".figure:first-child .figcaption")).display'
+# Expected: "block" (CSS :hover activated via mouse move)
+```
+
+PASS (workaround) if: `display` is `"block"` after `mouse move`
+
+---
+
+### B31 — `vibium fill` — fails on `input[type=range]` (Low · P3)
+
+**Source:** Discovered during The Internet `/horizontal_slider` testing (batch 5, 2026-04-27). Same class as B7 (`vibium fill` on textarea) — fill rejects range inputs as "not editable". Range inputs accept values programmatically and should be fillable.
+
+```sh
+vibium content '<input type="range" id="s" min="0" max="10" step="1" value="5">'
+vibium fill "#s" "3"
+echo "exit: $?"
+vibium value "#s"
+```
+
+PASS if: exit 0, `vibium value "#s"` returns `"3"`
+FAIL if: `failed to fill: ... editable check failed — input type range not editable`
+
+Live site verification:
+```sh
+vibium go http://the-internet.herokuapp.com/horizontal_slider && vibium wait load
+vibium map
+# @e1 = input[type="range"]
+vibium fill @e1 "3"
+echo "exit: $?"
+vibium value @e1
+# Expected: "3"
+```
+
+PASS if: exit 0, value set to "3"
+FAIL if: "not editable" error — range input rejected by fill
+
+Workaround verification:
+```sh
+vibium eval 'const s=document.querySelector("input[type=range]"); s.value="3"; s.dispatchEvent(new Event("input",{bubbles:true})); s.dispatchEvent(new Event("change",{bubbles:true})); s.value'
+# Expected: "3"
+```
+
+PASS (workaround) if: eval returns `"3"` and display updates
+
+---
+
+### B32 — `vibium text` — buffer overflow on large page text (Medium · P3)
+
+**Source:** Discovered during randomuser.me API testing (batch 4, 2026-04-27). `vibium text` crashes with `bufio.Scanner: token too long` when page body text exceeds the scanner buffer limit (~64KB). Affects large JSON API responses and any page returning very large text content.
+
+```sh
+vibium go "https://randomuser.me/api/?results=5000&format=pretty" && vibium wait load
+vibium text
+echo "exit: $?"
+```
+
+PASS if: exit 0, page text returned (possibly truncated with a clear warning)
+FAIL if: `bufio.Scanner: token too long` — process crashes, exit non-zero
+
+Also test with a synthetic large page:
+```sh
+python3 -c "print('<html><body>' + 'x'*100000 + '</body></html>')" | vibium content --stdin
+vibium text
+echo "exit: $?"
+```
+
+PASS if: text returned without crash (may truncate; truncation with warning is acceptable)
+FAIL if: `bufio.Scanner: token too long` crash
+
+Workaround verification — eval with slice avoids the buffer limit:
+```sh
+vibium go "https://randomuser.me/api/?results=5000&format=pretty" && vibium wait load
+vibium eval 'JSON.parse(document.body.innerText).info.results'
+# Expected: 5000 (or whatever the API returned)
+```
+
+PASS (workaround) if: eval returns integer without crashing
+FAIL (full failure) if: eval also crashes or returns null for very large responses
+
+---
+
 ## Cleanup
 
 ```sh
@@ -908,8 +1062,12 @@ Print a summary table with actual results filled in:
 ║ B26  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B27  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ║ B28  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
+║ B29  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B30  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B31  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B32  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ╠══════╩══════════╩══════════╩══════════════════════════════════╣
-║  X PASS   Y FAIL   Z SKIP   (28 total)                          ║
+║  X PASS   Y FAIL   Z SKIP   (32 total)                          ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
