@@ -2,7 +2,7 @@
 
 A Claude Code skill that runs a full regression suite against [vibium](https://www.npmjs.com/package/vibium) — a browser automation CLI built on WebDriver BiDi.
 
-The suite covers **32 confirmed bugs** in vibium v26.3.18, verified across 20 sites. Each test maps to a documented bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112), produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
+The suite covers **32 confirmed bugs** in vibium v26.3.18, verified across 23 sites. Each test maps to a documented bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112), produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
 
 ## Usage
 
@@ -173,3 +173,4 @@ vibium click @e1  # → Error: enabled check failed — disabled attribute
 | 2026-04-25 | Hardened B28 candidate across 3 sites (Basic Calculator `input[type=button]`, testtrack.org injected `button`, vibium find ref): enabled check enforced consistently in all cases — original PrestaShop observation was timing artifact; B28 narrowed to `vibium find` over-inclusion of disabled elements (returns @ref, click still fails) |
 | 2026-04-25 | Promoted B28 to confirmed bug: completed full find-mode × element-type matrix (3 injected types × 5 find modes); CSS selector mode leaks for all types; `find text`/`find role` leak for `<button>` only; `vibium map` always correct; click always fails |
 | 2026-04-27 | Added B19 (frame context persistence), B24 (text buffer overflow), B29 (hover non-interactive), B30 (fill range) from batch 5 practice-testing; renumbered B19–B32 into strict priority order |
+| 2026-04-28 | Fixed bug numbering order (B19–B32 now strictly ascending by priority/severity); updated cross-site count to 23; synced VibiumDev/vibium#112 issue title and site counts |
