@@ -1,11 +1,11 @@
 ---
 name: vibium-cli-test
-description: Regression test suite for 32 known vibium CLI bugs (B1–B32), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site verification.
+description: Regression test suite for 33 known vibium CLI bugs (B1–B33), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site verification.
 ---
 
 # vibium CLI Regression Test Suite
 
-Run all 32 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B7 are P1, B8–B19 are P2, B20–B30 are P3, B31–B32 are P4.
+Run all 33 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B7 are P1, B8–B19 and B20 are P2, B21–B31 are P3, B32–B33 are P4.
 
 ## Setup
 
@@ -571,7 +571,7 @@ Regardless — for automation reliability use `vibium map` refs instead of `find
 
 ### B16 — `vibium map` — Web Components shadow DOM elements not exposed (Medium · P2)
 
-**Source:** Discovered during Polymer Shop testing (batch 3, 2026-04-22). All product listing, detail, cart, and checkout UI lives inside nested `<shop-app>` custom element shadow roots. `vibium map` returns "No interactive elements found" on every page. This is distinct from B23 (CSS-styled non-button `<li>` elements) — here the issue is shadow DOM encapsulation, not element type.
+**Source:** Discovered during Polymer Shop testing (batch 3, 2026-04-22). All product listing, detail, cart, and checkout UI lives inside nested `<shop-app>` custom element shadow roots. `vibium map` returns "No interactive elements found" on every page. This is distinct from B24 (CSS-styled non-button `<li>` elements) — here the issue is shadow DOM encapsulation, not element type.
 
 ```sh
 vibium go https://shop.polymer-project.org/ && vibium wait load
@@ -645,7 +645,7 @@ FAIL (B17 present) if: `find role button --name "Login"` times out; eval workaro
 
 ### B18 — `vibium fill` / `vibium type` — negative values parsed as flags (Medium · P2)
 
-**Source:** Discovered during BugEater QA Training Simulator testing (batch 4, 2026-04-22). Same root cause as B14 (geolocation negative coords) and B20 (sleep negative values) — the vibium CLI argument parser treats any argument starting with `-` as a flag rather than a value. Affects `vibium fill` and `vibium type`, meaning any form field that needs a negative number (e.g. `-2`, `-99.5`) cannot be filled directly.
+**Source:** Discovered during BugEater QA Training Simulator testing (batch 4, 2026-04-22). Same root cause as B14 (geolocation negative coords) and B21 (sleep negative values) — the vibium CLI argument parser treats any argument starting with `-` as a flag rather than a value. Affects `vibium fill` and `vibium type`, meaning any form field that needs a negative number (e.g. `-2`, `-99.5`) cannot be filled directly.
 
 ```sh
 vibium go https://bugeater.web.app/app/challenge/learn/adder && vibium wait load
@@ -710,7 +710,77 @@ PASS (workaround) if: returns `"MIDDLE"`
 
 ---
 
-### B20 — `vibium bidi-test` / `vibium launch-test` — WebSocket URL blank (High · P3)
+### B20 — `vibium fill` — rejects empty string at CLI level (Medium · P2)
+
+**Source:** Discovered during Automation in Testing batch testing (2026-05-10). Empty string `""` is rejected as a missing positional argument before any browser interaction occurs. Prevents clearing a pre-filled field via `vibium fill`. Companion inconsistency: `vibium type <sel> ""` accepts empty string (exit 0) but silently no-ops — field value unchanged. Neither command can clear a field.
+
+```sh
+vibium go https://the-internet.herokuapp.com/login && vibium wait load
+vibium fill "#username" "hello"
+vibium fill "#username" ""
+echo "exit: $?"
+```
+
+PASS if: exit 0, field cleared to empty string
+FAIL if: `Error: value is required` — CLI rejects `""` before reaching the browser
+
+Verify across element types:
+```sh
+# input[type=password]
+vibium fill "#password" "secret"
+vibium fill "#password" ""
+echo "exit: $?"
+
+# input[type=number]
+vibium go https://the-internet.herokuapp.com/inputs && vibium wait load
+vibium fill @e1 "42"
+vibium fill @e1 ""
+echo "exit: $?"
+
+# textarea
+vibium go "data:text/html,<textarea id=ta></textarea>" && vibium wait load
+vibium fill "#ta" "text"
+vibium fill "#ta" ""
+echo "exit: $?"
+```
+
+PASS if: all exit 0 and field is cleared
+FAIL if: all exit 1 with `Error: value is required`
+
+Verify `vibium type` inconsistency:
+```sh
+vibium go https://the-internet.herokuapp.com/login && vibium wait load
+vibium fill "#username" "prefilled"
+vibium type "#username" ""
+echo "exit: $?"
+vibium eval 'document.querySelector("#username").value'
+```
+
+PASS if: exit 1 (consistent with fill), OR exit 0 and field is cleared
+FAIL if: exit 0 but field value unchanged (`"prefilled"`) — silent no-op
+
+Verify whitespace bypass:
+```sh
+vibium fill "#username" " "
+echo "exit: $?"
+vibium eval 'document.querySelector("#username").value'
+```
+
+Expected FAIL note: single space `" "` and tab `"\t"` are accepted by CLI (exit 0) but leave literal whitespace in the field — they do not clear it. This is the only available "workaround" without dropping to eval.
+
+Workaround verification:
+```sh
+vibium fill "#username" "to_clear"
+vibium eval 'document.querySelector("#username").value = ""'
+vibium eval 'document.querySelector("#username").value'
+# Expected: ""
+```
+
+PASS (workaround) if: eval clears the field and returns `""`
+
+---
+
+### B21 — `vibium bidi-test` / `vibium launch-test` — WebSocket URL blank (High · P3)
 
 ```sh
 vibium bidi-test
@@ -728,7 +798,7 @@ FAIL if: `BiDi WebSocket: ` is blank and command hangs or errors
 
 ---
 
-### B21 — `vibium sleep` — negative values parsed as flags (Medium · P3)
+### B22 — `vibium sleep` — negative values parsed as flags (Medium · P3)
 
 ```sh
 vibium sleep -1
@@ -740,7 +810,7 @@ FAIL if: `Error: unknown shorthand flag: '1' in -1`
 
 ---
 
-### B22 — `vibium sleep` — oversize values silently clamp (Medium · P3)
+### B23 — `vibium sleep` — oversize values silently clamp (Medium · P3)
 
 ```sh
 time vibium sleep 30001
@@ -752,7 +822,7 @@ FAIL if: exits 0 after sleeping exactly 30s with `Slept for 30000 ms` (silently 
 
 ---
 
-### B23 — `vibium map` — custom-rendered and canvas elements not exposed (Medium · P3)
+### B24 — `vibium map` — custom-rendered and canvas elements not exposed (Medium · P3)
 
 **Source:** Discovered during Black Box Puzzles testing. Interactive clickable circles rendered as CSS-styled `<li>` elements (not `<button>` or `<a>`) did not appear in `vibium map` output. Required `getBoundingClientRect()` + `vibium mouse click x y`.
 
@@ -788,7 +858,7 @@ FAIL if: a11y-tree also misses them (full discovery failure — no alternative t
 
 ---
 
-### B24 — `vibium text` — buffer overflow on large page text (Medium · P3)
+### B25 — `vibium text` — buffer overflow on large page text (Medium · P3)
 
 **Source:** Discovered during randomuser.me API testing (batch 4, 2026-04-27). `vibium text` crashes with `bufio.Scanner: token too long` when page body text exceeds the scanner buffer limit (~64KB). Affects large JSON API responses and any page returning very large text content.
 
@@ -823,7 +893,7 @@ FAIL (full failure) if: eval also crashes or returns null for very large respons
 
 ---
 
-### B25 — `vibium check` — no element type guard (Low · P3)
+### B26 — `vibium check` — no element type guard (Low · P3)
 
 ```sh
 vibium go https://testtrack.org
@@ -838,7 +908,7 @@ FAIL if: silent exit 0 with no feedback when targeting a non-checkbox
 
 ---
 
-### B26 — `vibium ws-test` — http/https scheme not caught (Low · P3)
+### B27 — `vibium ws-test` — http/https scheme not caught (Low · P3)
 
 ```sh
 vibium ws-test https://testtrack.org; echo "exit: $?"
@@ -850,7 +920,7 @@ FAIL if: generic `failed to connect... malformed ws or wss URL` with no scheme g
 
 ---
 
-### B27 — `vibium upload` — no element type guard (Low · P3)
+### B28 — `vibium upload` — no element type guard (Low · P3)
 
 ```sh
 vibium go https://the-internet.herokuapp.com/upload
@@ -865,12 +935,12 @@ FAIL if: exit 0 with no validation error, OR exit 1 with only `BiDi error: unabl
 
 ---
 
-### B28 — `vibium find` returns @ref for disabled elements (Low · P3)
+### B29 — `vibium find` returns @ref for disabled elements (Low · P3)
 
 ```sh
 # Navigate to any page and inject a disabled button
 vibium go https://testtrack.org
-vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=\"b28\" disabled>B28</button>")'
+vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=\"b28\" disabled>B29</button>")'
 
 # CSS selector find — should exit 1 (element disabled), actually exits 0 (bug)
 vibium find "#b28"; echo "exit:$?"
@@ -885,13 +955,13 @@ vibium find "#b28" && vibium click @e1; echo "click exit:$?"
 PASS if: `vibium find "#b28"` exits 1 (element not found / not actionable) — consistent with `vibium map`
 FAIL if: `vibium find "#b28"` exits 0 and returns an @ref for a disabled element
 
-Expected FAIL output: `@e1 [button type="button"] "B28"` (exit 0) — ref returned despite element being disabled; `vibium map --selector "#b28"` returns "No interactive elements found" (inconsistency confirmed); subsequent `vibium click @e1` exits 1 with "enabled check failed — disabled attribute"
+Expected FAIL output: `@e1 [button type="button"] "B29"` (exit 0) — ref returned despite element being disabled; `vibium map --selector "#b28"` returns "No interactive elements found" (inconsistency confirmed); subsequent `vibium click @e1` exits 1 with "enabled check failed — disabled attribute"
 
 Note: CSS selector mode (`find "<selector>"`) leaks for all element types. `find text` and `find role` also leak for `<button>` but not for `<input>` types. `vibium map` always excludes disabled elements consistently.
 
 ---
 
-### B29 — `vibium hover` — fails on non-interactive elements (Low · P3)
+### B30 — `vibium hover` — fails on non-interactive elements (Low · P3)
 
 **Source:** Discovered during The Internet `/hovers` testing (batch 5, 2026-04-27). `vibium hover` fails with "element not found" on CSS-styled div elements even when they are fully visible in the DOM. CSS `:hover` pseudo-class works on any visible element — `vibium hover` should not require the element to be interactive.
 
@@ -937,7 +1007,7 @@ PASS (workaround) if: `display` is `"block"` after `mouse move`
 
 ---
 
-### B30 — `vibium fill` — fails on `input[type=range]` (Low · P3)
+### B31 — `vibium fill` — fails on `input[type=range]` (Low · P3)
 
 **Source:** Discovered during The Internet `/horizontal_slider` testing (batch 5, 2026-04-27). Same class as B7 (`vibium fill` on textarea) — fill rejects range inputs as "not editable". Range inputs accept values programmatically and should be fillable.
 
@@ -975,7 +1045,7 @@ PASS (workaround) if: eval returns `"3"` and display updates
 
 ---
 
-### B31 — `vibium serve` — noisy teardown (Low · P4)
+### B32 — `vibium serve` — noisy teardown (Low · P4)
 
 ```sh
 vibium serve --port 8090 &
@@ -1003,7 +1073,7 @@ FAIL if: only `bind: address already in use` with no `--port` hint
 
 ---
 
-### B32 — `vibium content ""` — inconsistent error message (Low · P4)
+### B33 — `vibium content ""` — inconsistent error message (Low · P4)
 
 ```sh
 vibium content ""
@@ -1053,21 +1123,22 @@ Print a summary table with actual results filled in:
 ║ B17  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B18  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B19  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
-║ B20  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B21  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B20  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║ B21  ║ High     ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B22  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B23  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B24  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B25  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
+║ B25  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B26  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B27  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B28  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B29  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B30  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
-║ B31  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
+║ B31  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B32  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
+║ B33  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ╠══════╩══════════╩══════════╩══════════════════════════════════╣
-║  X PASS   Y FAIL   Z SKIP   (32 total)                          ║
+║  X PASS   Y FAIL   Z SKIP   (33 total)                          ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
