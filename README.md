@@ -2,7 +2,7 @@
 
 A Claude Code skill that runs a full regression suite against [vibium](https://www.npmjs.com/package/vibium) — a browser automation CLI built on WebDriver BiDi.
 
-The suite covers **32 confirmed bugs** in vibium v26.3.18, verified across 23 sites. Each test maps to a documented bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112), produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
+The suite covers **33 confirmed bugs** in vibium v26.3.18, verified across 23 sites. Each test maps to a documented bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112), produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
 
 ## Usage
 
@@ -12,7 +12,7 @@ Install the skill via Claude Code, then run:
 /vibium-cli-test
 ```
 
-Claude will execute all 32 tests against the running vibium daemon and print a summary table.
+Claude will execute all 33 tests against the running vibium daemon and print a summary table.
 
 ## What it tests
 
@@ -37,19 +37,20 @@ Claude will execute all 32 tests against the running vibium daemon and print a s
 | B17 | Medium | P2 | `vibium find role` | `input[type=submit]` not found as `role button`; 30s timeout |
 | B18 | Medium | P2 | `vibium fill` / `vibium type` | Negative values parsed as flags — `unknown shorthand flag: '2' in -2` |
 | B19 | Medium | P2 | `vibium frame` | Frame context doesn't persist across CLI invocations |
-| B20 | High | P3 | `vibium bidi-test` / `vibium launch-test` | BiDi WebSocket URL blank in ChromeDriver 147.0 |
-| B21 | Medium | P3 | `vibium sleep` | Negative values parsed as flags |
-| B22 | Medium | P3 | `vibium sleep` | Oversize values silently clamp to 30000ms |
-| B23 | Medium | P3 | `vibium map` | Non-semantic clickable elements (`<li>`) not exposed as refs |
-| B24 | Medium | P3 | `vibium text` | Buffer overflow crash on large page text (`bufio.Scanner: token too long`) |
-| B25 | Low | P3 | `vibium check` | No element type guard |
-| B26 | Low | P3 | `vibium ws-test` | `http://`/`https://` scheme not caught at input |
-| B27 | Low | P3 | `vibium upload` | No element type guard |
-| B28 | Low | P3 | `vibium find` | CSS selector and some find modes return @ref for disabled elements (exit 0); `vibium map` correctly excludes them |
-| B29 | Low | P3 | `vibium hover` | Fails on non-interactive elements (`<div>`, `<img>`) with "element not found" |
-| B30 | Low | P3 | `vibium fill` | Crashes on `input[type=range]` — `editable check failed` |
-| B31 | Low | P4 | `vibium serve` | No `--port` hint on port conflict |
-| B32 | Low | P4 | `vibium content ""` | Inconsistent error message vs no-arg invocation |
+| B20 | Medium | P2 | `vibium fill` | Rejects empty string at CLI level — `Error: value is required` |
+| B21 | High | P3 | `vibium bidi-test` / `vibium launch-test` | BiDi WebSocket URL blank in ChromeDriver 147.0 |
+| B22 | Medium | P3 | `vibium sleep` | Negative values parsed as flags |
+| B23 | Medium | P3 | `vibium sleep` | Oversize values silently clamp to 30000ms |
+| B24 | Medium | P3 | `vibium map` | Non-semantic clickable elements (`<li>`) not exposed as refs |
+| B25 | Medium | P3 | `vibium text` | Buffer overflow crash on large page text (`bufio.Scanner: token too long`) |
+| B26 | Low | P3 | `vibium check` | No element type guard |
+| B27 | Low | P3 | `vibium ws-test` | `http://`/`https://` scheme not caught at input |
+| B28 | Low | P3 | `vibium upload` | No element type guard |
+| B29 | Low | P3 | `vibium find` | CSS selector and some find modes return @ref for disabled elements (exit 0); `vibium map` correctly excludes them |
+| B30 | Low | P3 | `vibium hover` | Fails on non-interactive elements (`<div>`, `<img>`) with "element not found" |
+| B31 | Low | P3 | `vibium fill` | Crashes on `input[type=range]` — `editable check failed` |
+| B32 | Low | P4 | `vibium serve` | Noisy teardown on SIGTERM; no `--port` hint on port conflict |
+| B33 | Low | P4 | `vibium content ""` | Inconsistent error message vs no-arg invocation |
 
 ## Cross-site coverage
 
@@ -57,7 +58,7 @@ Bugs are verified across 20 sites:
 
 | Site | Tests |
 |------|-------|
-| [testtrack.org](https://testtrack.org) | B1–B32 (baseline) |
+| [testtrack.org](https://testtrack.org) | B1–B33 (baseline) |
 | [var.parts](https://var.parts/) | B1, B4 |
 | [sauce-demo.myshopify.com](https://sauce-demo.myshopify.com/) | B1, B4 |
 | [saucedemo.com](https://www.saucedemo.com) | B1, B4 |
@@ -72,11 +73,11 @@ Bugs are verified across 20 sites:
 | [shop.polymer-project.org](https://shop.polymer-project.org/) | B16 (shadow DOM map) |
 | [practicesoftwaretesting.com](https://practicesoftwaretesting.com/) | B17 (`find role button` on `input[type=submit]`) |
 | [qa-practice.razvanvancea.ro](https://qa-practice.razvanvancea.ro/) | B15 (CSS uppercase ADD TO CART) |
-| [blackboxpuzzles.workroomprds.com](https://blackboxpuzzles.workroomprds.com/) | B23 (map misses `<li>` elements) |
+| [blackboxpuzzles.workroomprds.com](https://blackboxpuzzles.workroomprds.com/) | B24 (map misses `<li>` elements) |
 | [bugeater.web.app](https://bugeater.web.app/) | B18 (fill/type reject negative values) |
 | [compendiumdev.co.uk/apps/iframe-search](http://compendiumdev.co.uk/apps/iframe-search/iframe-search.html) | B5 (select silent false success) |
-| [the-internet.herokuapp.com](http://the-internet.herokuapp.com/) | B19 (frame context), B27 (upload type guard), B29 (hover non-interactive), B30 (fill range) |
-| [randomuser.me](https://randomuser.me/) | B24 (text buffer overflow) |
+| [the-internet.herokuapp.com](http://the-internet.herokuapp.com/) | B19 (frame context), B20 (fill empty string), B28 (upload type guard), B30 (hover non-interactive), B31 (fill range) |
+| [randomuser.me](https://randomuser.me/) | B25 (text buffer overflow) |
 
 ## B3 daemon deadlock — known triggers
 
@@ -86,11 +87,11 @@ B3 has three confirmed trigger patterns. All deadlock the daemon socket:
 2. **Form POST navigation** — clicking a submit button that triggers a server-side POST request and full page reload (PHP Travels demo form). Pre-stubbing dialogs does not help. Workaround: `vibium eval 'form.submit()'` or avoid clicking submit buttons that cause server navigation.
 3. **PrestaShop subdomain page navigation** — any full-page navigation within a PrestaShop inner subdomain deadlocks the socket. This includes both `vibium click` on nav links AND `vibium go` to subdomain pages — the trigger is the navigation event itself, not the mechanism. Confirmed triggers: nav link clicks, `vibium go "$INNER/product-page.html"`. Workaround: `vibium eval 'location.href = "..."'` + `vibium wait load` (the only approach that does not deadlock).
 
-## B16 vs B23 — shadow DOM vs non-interactive elements
+## B16 vs B24 — shadow DOM vs non-interactive elements
 
-Both B23 and B16 result in `vibium map` returning nothing, but the cause differs:
+Both B24 and B16 result in `vibium map` returning nothing, but the cause differs:
 
-| | B23 | B16 |
+| | B24 | B16 |
 |-|-----|-----|
 | Site | Black Box Puzzles | Polymer Shop |
 | Element type | CSS-styled `<li>` (not button/a) | Custom elements with shadow roots |
@@ -127,7 +128,7 @@ Each `FAIL` includes the exact error string observed and notes whether the sympt
 
 vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
 
-## B28 — `vibium find` over-includes disabled elements
+## B29 — `vibium find` over-includes disabled elements
 
 `vibium map` consistently excludes disabled elements (no @ref assigned). `vibium find` returns an @ref for disabled elements in several modes (exit 0). Click on any leaked @ref always fails with "enabled check failed — disabled attribute" — the action layer is correct. The bug is that `find` leaks an @ref for an element the user cannot act on, while `map` does not.
 
@@ -174,3 +175,4 @@ vibium click @e1  # → Error: enabled check failed — disabled attribute
 | 2026-04-25 | Promoted B28 to confirmed bug: completed full find-mode × element-type matrix (3 injected types × 5 find modes); CSS selector mode leaks for all types; `find text`/`find role` leak for `<button>` only; `vibium map` always correct; click always fails |
 | 2026-04-27 | Added B19 (frame context persistence), B24 (text buffer overflow), B29 (hover non-interactive), B30 (fill range) from batch 5 practice-testing; renumbered B19–B32 into strict priority order |
 | 2026-04-28 | Fixed bug numbering order (B19–B32 now strictly ascending by priority/severity); updated cross-site count to 23; synced VibiumDev/vibium#112 issue title and site counts |
+| 2026-05-10 | Added B20 (`vibium fill` rejects empty string — `Error: value is required` — from Automation in Testing testing); renumbered B20–B32 → B21–B33 |
