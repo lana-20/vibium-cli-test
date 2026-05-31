@@ -5,7 +5,7 @@ description: Regression test suite for 33 known vibium CLI bugs (B1–B33), orde
 
 # vibium CLI Regression Test Suite
 
-Run all 33 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B7 are P1, B8–B19 and B20 are P2, B21–B31 are P3, B32–B33 are P4.
+Run all 33 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B7 are P1, B8–B20 are P2, B21–B31 are P3, B32–B33 are P4.
 
 ## Setup
 

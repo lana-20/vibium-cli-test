@@ -54,7 +54,7 @@ Claude will execute all 33 tests against the running vibium daemon and print a s
 
 ## Cross-site coverage
 
-Bugs are verified across 20 sites:
+Bugs are verified across 23 sites:
 
 | Site | Tests |
 |------|-------|
