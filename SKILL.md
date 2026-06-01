@@ -940,22 +940,22 @@ FAIL if: exit 0 with no validation error, OR exit 1 with only `BiDi error: unabl
 ```sh
 # Navigate to any page and inject a disabled button
 vibium go https://testtrack.org
-vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=\"b28\" disabled>B29</button>")'
+vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=\"b29\" disabled>B29</button>")'
 
 # CSS selector find — should exit 1 (element disabled), actually exits 0 (bug)
-vibium find "#b28"; echo "exit:$?"
+vibium find "#b29"; echo "exit:$?"
 
 # map — correctly excludes it
-vibium map --selector "#b28"
+vibium map --selector "#b29"
 
 # Confirm click on the leaked ref fails correctly
-vibium find "#b28" && vibium click @e1; echo "click exit:$?"
+vibium find "#b29" && vibium click @e1; echo "click exit:$?"
 ```
 
-PASS if: `vibium find "#b28"` exits 1 (element not found / not actionable) — consistent with `vibium map`
-FAIL if: `vibium find "#b28"` exits 0 and returns an @ref for a disabled element
+PASS if: `vibium find "#b29"` exits 1 (element not found / not actionable) — consistent with `vibium map`
+FAIL if: `vibium find "#b29"` exits 0 and returns an @ref for a disabled element
 
-Expected FAIL output: `@e1 [button type="button"] "B29"` (exit 0) — ref returned despite element being disabled; `vibium map --selector "#b28"` returns "No interactive elements found" (inconsistency confirmed); subsequent `vibium click @e1` exits 1 with "enabled check failed — disabled attribute"
+Expected FAIL output: `@e1 [button type="button"] "B29"` (exit 0) — ref returned despite element being disabled; `vibium map --selector "#b29"` returns "No interactive elements found" (inconsistency confirmed); subsequent `vibium click @e1` exits 1 with "enabled check failed — disabled attribute"
 
 Note: CSS selector mode (`find "<selector>"`) leaks for all element types. `find text` and `find role` also leak for `<button>` but not for `<input>` types. `vibium map` always excludes disabled elements consistently.
 
