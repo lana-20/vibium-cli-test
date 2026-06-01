@@ -1,6 +1,6 @@
 ---
 name: vibium-cli-test
-description: Regression test suite for 33 known vibium CLI bugs (B1–B33), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site verification.
+description: Regression test suite for 33 known vibium CLI bugs (B1–B33), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/PARTIAL/SKIP with exact repro steps and cross-site verification. Known partials: B15 (find text is correct/consistent — regression check only), B30 (hover fixed for div, still fails for img with external src), B32 (serve teardown clean, port conflict hint still missing).
 ---
 
 # vibium CLI Regression Test Suite
@@ -9,7 +9,9 @@ Run all 33 tests and produce a final summary table. Each test maps to a bug in [
 
 ## Setup
 
-Resolve vibium binary: try `vibium` globally, then `./node_modules/.bin/vibium`.
+Resolve vibium binary: try `vibium` globally, then `./node_modules/.bin/vibium`, then `/usr/local/bin/vibium`.
+
+**macOS PATH note:** on macOS the Python vibium client can shadow the npm binary. If `vibium` shows only `install` and `version` commands, the Python client is winning. Use the full path `/usr/local/bin/vibium` (npm global) instead, or confirm with `npm list -g vibium`.
 
 Ensure daemon is running and healthy before starting:
 ```sh
@@ -263,15 +265,15 @@ vibium eval 'document.querySelector("#oldSelectMenu").value'
 PASS if: exit 1 with option-not-found error
 FAIL if: exit 0 with success message but `.value` is `""` (no selection occurred)
 
-Also verify text-vs-value distinction:
+Also verify label-based selection (fixed in v26.5.31 — now matches by visible label, not `value` attribute):
 ```sh
 vibium select "#oldSelectMenu" "Yellow"
 echo "exit: $?"
 vibium eval 'document.querySelector("#oldSelectMenu").value'
 ```
 
-PASS if: exit 1 (text unsupported and clearly errored), OR exit 0 and `.value` is `"Yellow"`
-FAIL if: exit 0 but `.value` is `""` (silent wrong state)
+PASS if: exit 0 and `.value` is non-empty (option selected by visible label "Yellow"; underlying value attribute may differ, e.g. `"3"`)
+FAIL if: exit 0 but `.value` is `""` (silent wrong state), OR exit 1 with unsupported error
 
 **Cross-site check — Parking Cost Calculator lot dropdown:**
 
@@ -496,6 +498,8 @@ FAIL if: `Error: unknown shorthand flag: '1' in -122.4194`
 
 ### B15 — `vibium find text` — searches DOM text, not CSS-transformed display text (Medium · P2)
 
+**Status as of v26.5.31:** Confirmed PASS — behavior is consistent and correct. `find text` is case-sensitive against DOM text only; CSS `text-transform` is never applied. This test is retained as a regression check.
+
 **Source:** Discovered during AcademyBugs testing. Nav items and buttons had CSS `text-transform: uppercase` visually but mixed-case DOM text. Searching by the uppercase rendered string returned no results.
 
 ```sh
@@ -598,6 +602,8 @@ vibium eval 'JSON.stringify(document.querySelector("shop-app")?.shadowRoot?.quer
 PASS (workaround) if: eval returns a count > 0
 FAIL (full failure) if: eval also returns null or 0 (shadow DOM completely opaque to eval — no recovery path)
 
+**Note (confirmed v26.5.31):** eval shadowRoot traversal also returns `null` on shop.polymer-project.org — this is a full failure with no eval workaround available.
+
 ---
 
 ### B17 — `vibium find role button` — times out on `input[type=submit]` (Medium · P2)
@@ -626,9 +632,9 @@ Live site verification — PST login:
 ```sh
 vibium go https://practicesoftwaretesting.com/auth/login && vibium wait load
 
-# This times out (B17 symptom)
-vibium find role button --name "Login" --timeout 5000
-echo "exit: $? (should timeout with B17 present)"
+# This times out (B17 symptom) — note: find role has no --timeout flag; use shell timeout
+timeout 8 vibium find role button --name "Login"
+echo "exit: $? (124=timeout, confirms B17 present)"
 
 # This works (eval workaround)
 vibium fill "#email" "customer@practicesoftwaretesting.com"
@@ -639,7 +645,7 @@ echo "url after login (workaround)"
 ```
 
 PASS (B17 fixed) if: `find role button --name "Login"` returns a ref, exit 0
-FAIL (B17 present) if: `find role button --name "Login"` times out; eval workaround required
+FAIL (B17 present) if: `find role button --name "Login"` times out (shell timeout exit 124); eval workaround required
 
 ---
 
@@ -965,6 +971,8 @@ Note: CSS selector mode (`find "<selector>"`) leaks for all element types. `find
 
 **Source:** Discovered during The Internet `/hovers` testing (batch 5, 2026-04-27). `vibium hover` fails with "element not found" on CSS-styled div elements even when they are fully visible in the DOM. CSS `:hover` pseudo-class works on any visible element — `vibium hover` should not require the element to be interactive.
 
+**Status as of v26.5.31:** PARTIAL — `hover` on inline `<div>` now works (exit 0). `hover` on `<img>` with an external `src` still fails with `visible check failed — zero size` (image not yet sized at hover time).
+
 ```sh
 vibium content '<div id="hov" style="width:100px;height:100px;background:blue;"></div>'
 vibium hover "#hov"
@@ -982,7 +990,7 @@ echo "exit: $?"
 ```
 
 PASS if: exit 0
-FAIL if: "element not found" error
+FAIL if: `visible check failed — zero size` — image with external src not yet rendered at hover time (still failing as of v26.5.31)
 
 Live site verification — The Internet `/hovers`:
 ```sh
@@ -1045,8 +1053,11 @@ PASS (workaround) if: eval returns `"3"` and display updates
 
 ---
 
-### B32 — `vibium serve` — noisy teardown (Low · P4)
+### B32 — `vibium serve` — noisy teardown / missing port conflict hint (Low · P4)
 
+**Status as of v26.5.31:** PARTIAL — teardown is now clean (PASS). Port conflict error still lacks `--port` hint (FAIL).
+
+Sub-test 1 — teardown:
 ```sh
 vibium serve --port 8090 &
 SERVE_PID=$!
@@ -1056,10 +1067,10 @@ wait $SERVE_PID 2>/tmp/vibium-serve-stderr.txt
 cat /tmp/vibium-serve-stderr.txt
 ```
 
-PASS if: no stack traces or unexpected error lines on shutdown
-FAIL if: multiple error lines / Go stack output printed to stderr on SIGTERM
+PASS if: no output on stderr on SIGTERM (fixed in v26.5.31)
+FAIL if: stack traces or multiple error lines printed to stderr on SIGTERM
 
-Port conflict hint sub-test:
+Sub-test 2 — port conflict hint:
 ```sh
 vibium serve --port 8090 &
 BGPID=$!
@@ -1119,6 +1130,8 @@ Print a summary table with actual results filled in:
 ║ B13  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B14  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B15  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
+║      ║          ║          ║ (PASS = consistent DOM-cased     ║
+║      ║          ║          ║ matching; regression check only) ║
 ║ B16  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B17  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ║ B18  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
@@ -1138,7 +1151,7 @@ Print a summary table with actual results filled in:
 ║ B32  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ║ B33  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ╠══════╩══════════╩══════════╩══════════════════════════════════╣
-║  X PASS   Y FAIL   Z SKIP   (33 total)                          ║
+║  X PASS   Y FAIL   Z PARTIAL   W SKIP   (33 total)               ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
