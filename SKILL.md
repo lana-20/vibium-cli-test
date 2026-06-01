@@ -1,6 +1,6 @@
 ---
 name: vibium-cli-test
-description: Regression test suite for 33 known vibium CLI bugs (B1–B33), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/PARTIAL/SKIP with exact repro steps and cross-site verification. Known partials: B15 (find text is correct/consistent — regression check only), B30 (hover fixed for div, still fails for img with external src), B32 (serve teardown clean, port conflict hint still missing).
+description: "Regression test suite for 33 known vibium CLI bugs (B1–B33), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/PARTIAL/SKIP with exact repro steps and cross-site verification. Known partials: B15 (find text is correct/consistent — regression check only), B30 (hover fixed for div, still fails for img with external src), B32 (serve teardown clean, port conflict hint still missing)."
 ---
 
 # vibium CLI Regression Test Suite
