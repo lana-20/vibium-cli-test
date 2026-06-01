@@ -2,7 +2,9 @@
 
 A Claude Code skill that runs a full regression suite against [vibium](https://www.npmjs.com/package/vibium) — a browser automation CLI built on WebDriver BiDi.
 
-The suite covers **33 confirmed bugs** in vibium v26.3.18, verified across 23 sites. Each test maps to a documented bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112), produces a `PASS / FAIL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
+The suite covers **33 confirmed bugs** originally found in vibium v26.3.18, verified across 23 sites. Each test maps to a documented bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112), produces a `PASS / FAIL / PARTIAL / SKIP` result, and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
+
+**v26.5.31 status:** B1, B2, B4, B5, B7 fixed (PASS). B15 confirmed correct/consistent behavior (regression check). B30 and B32 partially fixed (PARTIAL). B3 deferred. B6 and B8–B14, B16–B29, B31, B33 unchanged.
 
 ## Usage
 
@@ -18,13 +20,13 @@ Claude will execute all 33 tests against the running vibium daemon and print a s
 
 | # | Severity | Priority | Command | Bug |
 |---|----------|----------|---------|-----|
-| B1 | Critical | P1 | `vibium count` | Go type mismatch — crashes on every selector |
-| B2 | Critical | P1 | `vibium storage` | Go type mismatch — crashes on all sites |
+| B1 | Critical | P1 | `vibium count` | ~~Go type mismatch — crashes on every selector~~ **Fixed v26.5.31** |
+| B2 | Critical | P1 | `vibium storage` | ~~Go type mismatch — crashes on all sites~~ **Fixed v26.5.31** |
 | B3 | Critical | P1 | `vibium click` (dialog/nav) | Navigation events deadlock daemon socket; three confirmed trigger patterns |
-| B4 | High | P1 | `vibium cookies <name> <value>` | BiDi requires domain field; set always fails |
-| B5 | High | P1 | `vibium select` | Silent false success on invalid or text-matched options |
+| B4 | High | P1 | `vibium cookies <name> <value>` | ~~BiDi requires domain field; set always fails~~ **Fixed v26.5.31** — domain derived from current page |
+| B5 | High | P1 | `vibium select` | ~~Silent false success on invalid or text-matched options~~ **Fixed v26.5.31** — now errors on no match; matches by visible label |
 | B6 | High | P1 | `vibium click --timeout` | Flag accepted but silently ignored |
-| B7 | High | P1 | `vibium fill` | Crashes on `<textarea>` — `element type is not supported` |
+| B7 | High | P1 | `vibium fill` | ~~Crashes on `<textarea>` — `element type is not supported`~~ **Fixed v26.5.31** |
 | B8 | High | P2 | `vibium attr` | Boolean attributes indistinguishable from absent |
 | B9 | High | P2 | `vibium eval` | Objects and arrays print Go internal repr |
 | B10 | Medium | P2 | `vibium is actionable` | Requires 2 args; all sibling commands require 1 |
@@ -32,8 +34,8 @@ Claude will execute all 33 tests against the running vibium daemon and print a s
 | B12 | Medium | P2 | `vibium completion zsh` | Generated script errors on source |
 | B13 | Medium | P2 | `vibium daemon status/stop` | Always exit 0 regardless of daemon state |
 | B14 | Medium | P2 | `vibium geolocation` | Negative coordinates parsed as flags |
-| B15 | Medium | P2 | `vibium find text` | Searches DOM text, not CSS-transformed display text |
-| B16 | Medium | P2 | `vibium map` | Web Components shadow DOM elements not exposed |
+| B15 | Medium | P2 | `vibium find text` | Searches DOM text, not CSS-transformed display text — **confirmed correct/consistent behavior** (regression check only) |
+| B16 | Medium | P2 | `vibium map` | Web Components shadow DOM elements not exposed — eval shadowRoot workaround also returns `null` (full failure, no recovery path) |
 | B17 | Medium | P2 | `vibium find role` | `input[type=submit]` not found as `role button`; 30s timeout |
 | B18 | Medium | P2 | `vibium fill` / `vibium type` | Negative values parsed as flags — `unknown shorthand flag: '2' in -2` |
 | B19 | Medium | P2 | `vibium frame` | Frame context doesn't persist across CLI invocations |
@@ -47,9 +49,9 @@ Claude will execute all 33 tests against the running vibium daemon and print a s
 | B27 | Low | P3 | `vibium ws-test` | `http://`/`https://` scheme not caught at input |
 | B28 | Low | P3 | `vibium upload` | No element type guard |
 | B29 | Low | P3 | `vibium find` | CSS selector and some find modes return @ref for disabled elements (exit 0); `vibium map` correctly excludes them |
-| B30 | Low | P3 | `vibium hover` | Fails on non-interactive elements (`<div>`, `<img>`) with "element not found" |
+| B30 | Low | P3 | `vibium hover` | **PARTIAL v26.5.31** — `<div>` hover fixed; `<img>` with external src still fails (`visible check failed — zero size`) |
 | B31 | Low | P3 | `vibium fill` | Crashes on `input[type=range]` — `editable check failed` |
-| B32 | Low | P4 | `vibium serve` | Noisy teardown on SIGTERM; no `--port` hint on port conflict |
+| B32 | Low | P4 | `vibium serve` | **PARTIAL v26.5.31** — teardown clean on SIGTERM (fixed); no `--port` hint on port conflict (still failing) |
 | B33 | Low | P4 | `vibium content ""` | Inconsistent error message vs no-arg invocation |
 
 ## Cross-site coverage
@@ -105,9 +107,11 @@ Both B24 and B16 result in `vibium map` returning nothing, but the cause differs
 - Chrome + ChromeDriver installed (vibium manages this automatically)
 - Claude Code with the skill installed
 
+**macOS note:** the Python vibium client can shadow the npm binary in PATH. If `vibium` only shows `install` and `version` commands, use `/usr/local/bin/vibium` directly or confirm with `npm list -g vibium`.
+
 ## Output
 
-The suite prints a `PASS / FAIL / SKIP` line per test and a final summary table:
+The suite prints a `PASS / FAIL / PARTIAL / SKIP` line per test and a final summary table:
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
@@ -126,7 +130,8 @@ Each `FAIL` includes the exact error string observed and notes whether the sympt
 
 ## Verified against
 
-vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9
+vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9 (original)
+vibium v26.5.31 · ChromeDriver 147.0.7727.56 · macOS darwin 25.5.0 · zsh 5.9 (2026-06-01)
 
 ## B29 — `vibium find` over-includes disabled elements
 
@@ -154,10 +159,10 @@ Tested across three element types (`<button disabled>`, `<input type="submit" di
 vibium eval 'document.body.insertAdjacentHTML("beforeend","<button id=b28 disabled>Disabled</button>")'
 
 # find by selector — exits 0, returns @ref (bug)
-vibium find "#b28"   # → @e1 [button] "Disabled", exit 0
+vibium find "#b29"   # → @e1 [button] "Disabled", exit 0
 
 # map — exits 0, no ref returned (correct)
-vibium map --selector "#b28"  # → No interactive elements found
+vibium map --selector "#b29"  # → No interactive elements found
 
 # click the leaked ref — exits 1, error (enabled check works correctly)
 vibium click @e1  # → Error: enabled check failed — disabled attribute
@@ -176,3 +181,4 @@ vibium click @e1  # → Error: enabled check failed — disabled attribute
 | 2026-04-27 | Added B19 (frame context persistence), B24 (text buffer overflow), B29 (hover non-interactive), B30 (fill range) from batch 5 practice-testing; renumbered B19–B32 into strict priority order |
 | 2026-04-28 | Fixed bug numbering order (B19–B32 now strictly ascending by priority/severity); updated cross-site count to 23; synced VibiumDev/vibium#112 issue title and site counts |
 | 2026-05-10 | Added B20 (`vibium fill` rejects empty string — `Error: value is required` — from Automation in Testing testing); renumbered B20–B32 → B21–B33 |
+| 2026-06-01 | Ran full suite against v26.5.31; B1, B2, B4, B5, B7 now PASS (fixed at engine level); B15 reclassified as PASS/consistent (regression check only); B30 PARTIAL (div hover fixed, img still fails); B32 PARTIAL (teardown clean, port hint still missing); B3 deferred; B6/B8–B29/B31/B33 unchanged; fixed B29 repro selector typo (#b28 → #b29); added macOS PATH note for Python/npm vibium conflict |
