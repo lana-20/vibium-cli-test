@@ -79,7 +79,7 @@ Claude will execute all 35 tests against the running vibium daemon and print a s
 | B32 | Low | P4 | `vibium serve` | **PARTIAL v26.5.31** — teardown clean on SIGTERM (fixed); no `--port` hint on port conflict (still failing) | deferred — minor UX |
 | B33 | Low | P4 | `vibium content ""` | Inconsistent error message vs no-arg invocation | [#213](https://github.com/VibiumDev/vibium/issues/213) OPEN |
 | B34 | High | P2 | `vibium eval` / `browser_evaluate` | All exception detail dropped — every error reduced to `script exception:`; reproduces identically on the MCP surface | [#221](https://github.com/VibiumDev/vibium/issues/221) OPEN — do not re-file |
-| B35 | Medium | P2 | `vibium screenshot -o` | Directory component of output path discarded; `pdf`/`storage`/`record stop` honour theirs | not yet filed |
+| B35 | Medium | P2 | `vibium screenshot -o` | Output path silently discarded — CLI routes through the MCP handler and inherits its path-traversal guard; `pdf`/`storage`/`record stop` honour theirs | not yet filed |
 
 B34 and B35 are **appended rather than renumbered** into strict priority order. B34 is
 High · P2 and would otherwise sort next to B9. Renumbering is no longer about #112 — that
@@ -175,8 +175,9 @@ vibium v26.3.18 · ChromeDriver 147.0.7727.56 · macOS darwin 25.3.0 · zsh 5.9 
 vibium v26.5.31 · ChromeDriver 147.0.7727.56 · macOS darwin 25.5.0 · zsh 5.9 (2026-06-01)
 vibium v26.5.31 · macOS darwin 25.5.0 · zsh 5.9 (2026-07-28 — B34, B35, FR1)
 
-**Platform caveat for B35:** `~/Pictures` is a macOS convention. B35 was verified only on
-macOS; the fallback directory and possibly the behaviour may differ on Linux and Windows.
+**Platform note for B35:** verified on macOS, but **not macOS-specific** — `paths.GetScreenshotDir()`
+applies the same `Pictures/Vibium` convention on Linux and Windows, so it should reproduce there.
+(An earlier draft wrongly flagged this as a macOS-only caveat.)
 
 ## B29 — `vibium find` over-includes disabled elements
 

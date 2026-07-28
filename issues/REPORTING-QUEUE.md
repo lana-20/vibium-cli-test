@@ -19,8 +19,15 @@ verbatim.
   `~/Pictures/Vibium/<basename>`. `pdf`, `storage` and `record stop` all honour theirs,
   so it is an inconsistency within one CLI. Silent — `--json` reports `ok:true` with the
   redirected path.
-  → [`B35.md`](B35.md) · **only genuinely novel finding of this batch**
-  → State platform caveat: verified on macOS only; `~/Pictures` is a macOS convention.
+  → [`B35.md`](B35.md) · **only genuinely novel finding of this batch** · hardened 2026-07-28
+  → **Lead with the root cause, not the symptom.** The flattening is deliberate — a
+  path-traversal guard in the shared daemon handler (`agent/handlers.go`). The CLI
+  dispatches through `daemonCall("browser_screenshot", …)`, so it is treated as an
+  untrusted agent surface. The guard is right for MCP and wrong for a user's own shell,
+  and MCP is also the *only* surface with `--screenshot-dir`.
+  → Propose a **surface-aware** fix. "Just honour the path" would reintroduce the
+  traversal risk on MCP and will be rejected.
+  → Not macOS-specific: `GetScreenshotDir()` uses `Pictures/Vibium` on Linux and Windows too.
 
 - [ ] **B24 · `map` misses framework-attached click handlers**
   Severity Medium · P3 · CLI
