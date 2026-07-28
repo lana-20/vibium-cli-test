@@ -1,11 +1,36 @@
 ---
 name: vibium-cli-test
-description: "Regression test suite for 33 known vibium CLI bugs (B1–B33), ordered by priority and severity (P1 Critical first, P4 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/PARTIAL/SKIP with exact repro steps and cross-site verification. Known partials: B15 (find text is correct/consistent — regression check only), B30 (hover fixed for div, still fails for img with external src), B32 (serve teardown clean, port conflict hint still missing)."
+description: "Regression test suite for 35 known vibium CLI bugs (B1–B35), ordered by priority and severity (P1 Critical first, P4 Low last; B34–B35 appended out of order). Umbrella issue #112 was closed 2026-07-06 and split into one issue per bug — B-numbers are suite labels now, see README for the per-bug issue map. B6, B9, B14, B18, B20, B22, B30, B31 are fixed in source but unpublished, so they FAIL expectedly on v26.5.31. B30's <img> case is a symptom of B6 (hover has no --timeout and a zero default on v26.5.31), fixed by #182. B24 re-established 2026-07-28 with a new repro (coffee-cart.app + self-contained matrix) after its original page 404'd. Known partials: B15, B32. B34 is tracked upstream as #221 and reproduces on MCP too — a CLI-only fix is PARTIAL. Labels PASS/FAIL/PARTIAL/SKIP with exact repro steps and cross-site verification."
 ---
 
 # vibium CLI Regression Test Suite
 
-Run all 33 tests and produce a final summary table. Each test maps to a bug in [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112). Tests are ordered by priority and severity — B1–B7 are P1, B8–B20 are P2, B21–B31 are P3, B32–B33 are P4.
+Run all 35 tests and produce a final summary table. B1–B33 are ordered by priority and severity — B1–B7 are P1, B8–B20 are P2, B21–B31 are P3, B32–B33 are P4. **B34 (High · P2) and B35 (Medium · P2) are appended rather than renumbered**, because the B-numbers are cited across upstream issues and prior comments.
+
+**Upstream tracking changed.** The umbrella issue [#112](https://github.com/VibiumDev/vibium/issues/112) was closed 2026-07-06 and split into one issue per bug. B-numbers are labels for this suite now, not a mapping to #112 — see the README for the per-bug issue map.
+
+## Expected FAILs — do not report as regressions
+
+As of 2026-07-28 the published npm `latest` is **v26.5.31**. These seven are **fixed in source but not published**, so they still FAIL on any installed build. Label them `FAIL (expected — fixed in #NNN, unpublished)` rather than a plain FAIL:
+
+| Bug | Fixed by |
+|---|---|
+| B6 `click --timeout` | [#182](https://github.com/VibiumDev/vibium/pull/182) merged |
+| B9 `eval` Go repr | [#180](https://github.com/VibiumDev/vibium/pull/180) merged |
+| B14, B18, B22 negative-as-flag | [#179](https://github.com/VibiumDev/vibium/pull/179) merged |
+| B20 `fill ""` | [#187](https://github.com/VibiumDev/vibium/issues/187) closed |
+| B30 `hover` on zero-size elements | [#182](https://github.com/VibiumDev/vibium/pull/182) merged — same root cause as B6 |
+| B31 `fill` on `input[type=range]` | [#188](https://github.com/VibiumDev/vibium/issues/188) closed |
+
+Before running, confirm the installed version — if it is newer than 26.5.31 these should flip to genuine PASS:
+
+```sh
+vibium --version && npm view vibium version
+```
+
+**B24 has a working repro again** — the original page 404s, so it now uses a self-contained `vibium content` signal matrix plus coffee-cart.app. No longer expected to SKIP; it should FAIL on v26.5.31 (9 product divs invisible to `map`).
+
+**B30 is resolved, not disputed.** Its `<img>` case is a symptom of B6: on v26.5.31 `hover` has no `--timeout` and an effective default of zero, so it never auto-waits, and an `<img>` is briefly zero-size before it loads. `hover`, `dblclick` and `check` all fail identically with `timeout after 0s: visible check failed — zero size`. Fixed by #182 alongside B6. Report the `<div>` and `<img>` cases separately; see [`issues/B30.md`](issues/B30.md).
 
 ## Setup
 
@@ -828,39 +853,70 @@ FAIL if: exits 0 after sleeping exactly 30s with `Slept for 30000 ms` (silently 
 
 ---
 
-### B24 — `vibium map` — custom-rendered and canvas elements not exposed (Medium · P3)
+### B24 — `vibium map` — framework-attached click handlers not exposed (Medium · P3)
 
-**Source:** Discovered during Black Box Puzzles testing. Interactive clickable circles rendered as CSS-styled `<li>` elements (not `<button>` or `<a>`) did not appear in `vibium map` output. Required `getBoundingClientRect()` + `vibium mouse click x y`.
+**Source:** originally Black Box Puzzles (`puzzle29.html`), which now **404s** — upstream deferred B24 for lack of a stable repro. Re-established 2026-07-28 with a self-contained matrix plus coffee-cart.app. See [`issues/B24.md`](issues/B24.md).
+
+**The original description was wrong.** `map` does expose non-semantic elements when clickability is declared statically. It infers from DOM attributes only — semantic tag, `role`, `tabindex`, inline `onclick` — so it cannot see handlers registered with `addEventListener`, and ignores `cursor:pointer`. Every modern framework attaches handlers via `addEventListener`.
+
+**Part 1 — self-contained signal matrix.** No external site, cannot rot:
 
 ```sh
-vibium go https://blackboxpuzzles.workroomprds.com/puzzle29.html
-vibium wait load
+vibium content --stdin <<'EOF'
+<div id="s1" onclick="void 0">1 · inline onclick only</div>
+<div id="s2" style="cursor:pointer">2 · cursor:pointer only</div>
+<div id="s3" role="button">3 · role=button only</div>
+<div id="s4" tabindex="0">4 · tabindex only</div>
+<div id="s5">5 · addEventListener only</div>
+<div id="s6" style="cursor:pointer">6 · addEventListener + cursor:pointer</div>
+<div id="s7" role="button">7 · addEventListener + role=button</div>
+<div id="s8" class="btn">8 · nothing at all</div>
+<script>['s5','s6','s7'].forEach(id =>
+  document.getElementById(id).addEventListener('click', () => {}));</script>
+EOF
 vibium map
-echo "exit: $?"
 ```
 
-PASS if: output includes `@e1`, `@e2`... refs for the interactive puzzle elements (circles), exit 0
-FAIL if: output is empty or contains only non-puzzle elements (nav, links), and the circles are not exposed as interactive refs — this forces coordinate-based interaction
+v26.5.31 exposes 1, 3, 4, 7 and misses 2, 5, 6. Case 8 is correctly missed.
 
-Workaround verification — confirm coordinate-based clicking still works when map misses elements:
+PASS if: cases 2, 5 and 6 are also exposed, and case 8 is still missed
+FAIL if: 2, 5 or 6 remain missing
+
+**Part 2 — live repro, coffee-cart.app.** All nine products are plain `<div class="cup">` with Vue listeners, `cursor: auto`, no `role`, no `tabindex`, no `onclick` attribute:
+
 ```sh
-vibium eval 'JSON.stringify([...document.querySelectorAll("li")].slice(0,3).map(li => { const r = li.getBoundingClientRect(); return {x: Math.round(r.x + r.width/2), y: Math.round(r.y + r.height/2)} }))'
-# Get x,y from output — e.g. x=100, y=200
-vibium mouse click 100 200
-echo "exit: $? (coordinate click workaround)"
+vibium go https://coffee-cart.app/
+sleep 3
+vibium map
+vibium eval '(() => document.querySelectorAll(".cup").length)()'
 ```
 
-PASS if: exit 0 (coordinate click works regardless of map exposure)
-FAIL if: coordinate click fails (would indicate a separate `vibium mouse click` bug)
+PASS if: `map` exposes the 9 cups alongside the 3 nav links and checkout button
+FAIL if: `map` returns only 4 refs (`Menu page`, `Cart page`, `GitHub page`, `Proceed to checkout`) and no products
 
-Also verify `vibium a11y-tree` as an alternative discovery mechanism:
+Confirm the cups really are interactive, so a FAIL is a discovery gap and not a dead element:
+
 ```sh
-vibium a11y-tree
-echo "exit: $?"
+vibium eval '(() => { document.querySelectorAll(".cup")[2].click(); return "clicked"; })()'
+# the cart total should change from $0.00 to $19.00
 ```
 
-PASS if: a11y-tree reveals the puzzle `<li>` elements even when `vibium map` does not
-FAIL if: a11y-tree also misses them (full discovery failure — no alternative to coordinate heuristics)
+**Recovery path — must keep working.** This is what holds B24 at P3 rather than higher:
+
+```sh
+vibium find ".cup"     # → @e1 [div] "espresso"
+```
+
+PASS if: a usable @ref is returned
+FAIL if: `find` also misses it — that would be a full discovery failure with no recovery, as in B16
+
+**Secondary — ui5.sap.com** (heavier, ~6s load). Improved since the 2026-05-19 report of "No interactive elements found": now returns 127 refs, but 91 visible non-semantic `cursor:pointer` elements (80 `<span>`, 9 `<div>`, 2 `<bdi>`) remain unexposed:
+
+```sh
+vibium go "https://ui5.sap.com/#/demoapps"
+sleep 6
+vibium map | grep -c '^@e'
+```
 
 ---
 
@@ -971,7 +1027,27 @@ Note: CSS selector mode (`find "<selector>"`) leaks for all element types. `find
 
 **Source:** Discovered during The Internet `/hovers` testing (batch 5, 2026-04-27). `vibium hover` fails with "element not found" on CSS-styled div elements even when they are fully visible in the DOM. CSS `:hover` pseudo-class works on any visible element — `vibium hover` should not require the element to be interactive.
 
-**Status as of v26.5.31:** PARTIAL — `hover` on inline `<div>` now works (exit 0). `hover` on `<img>` with an external `src` still fails with `visible check failed — zero size` (image not yet sized at hover time).
+**Status as of v26.5.31:** PARTIAL — `hover` on inline `<div>` now works (exit 0). `hover` on `<img>` with an external `src` still fails with `timeout after 0s: visible check failed — zero size`.
+
+**Root cause identified 2026-07-28 — this is B6, not an `<img>` defect.** On v26.5.31 `hover` has no `--timeout` flag and an effective default of **zero**, so it never auto-waits; an `<img>` is simply the most common element that is briefly zero-size before it loads. A cached image passes, an uncached one fails at ~200ms. `dblclick` and `check` fail identically; `focus` and `scroll` pass (no visibility check). [#182](https://github.com/VibiumDev/vibium/pull/182) adds `--timeout` to these commands with a nonzero default and tests the auto-wait path on `hover` specifically, so B30 closes with B6. Comment draft: [`issues/B30.md`](issues/B30.md).
+
+**Deterministic repro** — makes the zero-size window independent of network timing:
+
+```sh
+vibium go https://the-internet.herokuapp.com/hovers
+vibium eval --stdin <<'EOF'
+(() => {
+  const im = document.createElement('img'); im.id = 'b30';
+  document.body.appendChild(im);                    // 0x0 — no src yet
+  setTimeout(() => { im.src = '/img/avatar-blank.jpg?cb=' + Date.now(); }, 600);
+  return 'created';
+})()
+EOF
+vibium hover "#b30"
+```
+
+PASS if: waits for the image to gain dimensions, then succeeds
+FAIL if: `timeout after 0s: visible check failed — zero size` in ~200ms
 
 ```sh
 vibium content '<div id="hov" style="width:100px;height:100px;background:blue;"></div>'
@@ -1096,10 +1172,127 @@ FAIL if: the empty-string case omits the `--stdin` hint present in the no-arg me
 
 ---
 
+### B34 — `vibium eval` — all exception detail dropped (High · P2)
+
+Appended out of priority order — see README. Would otherwise sort beside B9.
+**Tracked upstream as [#221](https://github.com/VibiumDev/vibium/issues/221) (OPEN) — do
+not file a new issue.** Root cause is located there: `clicker/internal/bidi/script.go`
+builds the message from `evalResult.Result`, which is empty for exception responses; the
+text lives on BiDi's `exceptionDetails.text`.
+
+```sh
+vibium go https://example.com
+vibium eval '(() => { throw new Error("CUSTOM_MESSAGE_HERE") })()'
+```
+
+PASS if: output contains `CUSTOM_MESSAGE_HERE`
+FAIL if: output is `Error: failed to evaluate: script exception:` with nothing after the colon
+
+**Exception-class check — every class must carry its detail:**
+
+```sh
+vibium eval 'const = = 5'                                    # SyntaxError
+vibium eval 'totallyUndefinedThing.foo'                      # ReferenceError
+vibium eval 'null.foo'                                       # TypeError
+vibium eval '(() => { throw "PLAIN_STRING_THROWN" })()'      # thrown string
+```
+
+PASS if: each names its error type or message
+FAIL if: all four return the identical empty `script exception:`
+
+**Flag check — the detail must be reachable somewhere:**
+
+```sh
+vibium eval --json '(() => { throw new Error("CUSTOM_MESSAGE_HERE") })()'
+vibium eval -v '(() => { throw new Error("CUSTOM_MESSAGE_HERE") })()'
+```
+
+PASS if: either surfaces the message
+FAIL if: `--json` gives `{"ok":false,"error":"failed to evaluate: script exception: "}` — note the
+trailing space where the text should be interpolated — and `-v` adds nothing
+
+**Control — confirms the detail exists and is only lost on the error path:**
+
+```sh
+vibium eval "(() => { try { null.foo } catch (e) { return e.constructor.name + ': ' + e.message } })()"
+```
+
+Must return `TypeError: Cannot read properties of null (reading 'foo')` in both the failing and
+fixed states. If this ever stops working, the problem is larger than B34.
+
+**Cross-surface check (MCP)** — the defect is in the shared evaluate path, so a CLI-only fix is
+PARTIAL:
+
+```
+browser_navigate { url: "https://example.com" }
+browser_evaluate { expression: "(() => { throw new Error(\"CUSTOM_MESSAGE_HERE\") })()" }
+```
+
+PASS if: the MCP error also carries `CUSTOM_MESSAGE_HERE`
+PARTIAL if: the CLI is fixed but MCP still returns bare `script exception:`
+
+**Cross-site check** — confirmed page-independent; run on any two of example.com,
+testtrack.org/canvas-demo, saucedemo.com. All must behave identically.
+
+---
+
+### B35 — `vibium screenshot -o` — output path directory discarded (Medium · P2)
+
+```sh
+cd /tmp
+vibium go https://example.com
+rm -f /tmp/vibium-b35-check.png ~/Pictures/Vibium/vibium-b35-check.png
+vibium screenshot -o /tmp/vibium-b35-check.png
+ls /tmp/vibium-b35-check.png
+```
+
+PASS if: the file exists at `/tmp/vibium-b35-check.png`
+FAIL if: absent, and the command reports `Screenshot saved to ~/Pictures/Vibium/vibium-b35-check.png`
+
+**Path-form matrix — every form must be honoured:**
+
+```sh
+vibium screenshot -o b35-rel.png          # relative to cwd
+vibium screenshot -o ./b35-dot.png        # explicit ./
+vibium screenshot -o ~/b35-home.png       # tilde expansion
+vibium screenshot -o /tmp/b35-abs.png     # absolute
+vibium screenshot -o sub/b35-nested.png   # subdirectory component
+```
+
+PASS if: each lands where specified (`sub/` created or a clear error)
+FAIL if: all five land in `~/Pictures/Vibium/` as bare basenames, `sub/` silently dropped
+
+**Sibling consistency check — these three already honour `-o` and must not regress:**
+
+```sh
+vibium pdf -o /tmp/b35.pdf        && ls /tmp/b35.pdf
+vibium storage -o /tmp/b35.json   && ls /tmp/b35.json
+vibium record start --name b35 && sleep 1 && vibium record stop -o /tmp/b35.zip && ls /tmp/b35.zip
+```
+
+PASS if: all three write to the given paths (current behaviour — regression guard)
+FAIL if: any now flattens like `screenshot`
+
+**Silent-failure check:**
+
+```sh
+vibium screenshot --json -o /tmp/b35-json.png
+```
+
+PASS if: reports the true path, or `ok:false` with an error
+FAIL if: reports `{"ok":true,...}` naming the redirected `~/Pictures/Vibium/` location
+
+Not site-dependent — a local path-handling bug, reproducible on any page.
+
+---
+
 ## Cleanup
 
 ```sh
 rm -f /tmp/vibium-reg-state.json /tmp/vibium-reg-lambdatest.json /tmp/vibium-reg-abantecart.json /tmp/vibium-reg-coffeecart.json /tmp/vibium-reg-academybugs.json /tmp/vibium-serve-stderr.txt /tmp/vibium-b12-stderr.txt
+# B35 leaves captures in both the target dir and the forced fallback
+rm -f /tmp/vibium-b35-check.png /tmp/b35-abs.png /tmp/b35.pdf /tmp/b35.json /tmp/b35.zip ~/b35-home.png
+rm -f ~/Pictures/Vibium/{vibium-b35-check,b35-rel,b35-dot,b35-home,b35-abs,b35-nested,b35-json}.png
 vibium daemon status || (vibium daemon start && sleep 2)
 ```
 
@@ -1150,8 +1343,12 @@ Print a summary table with actual results filled in:
 ║ B31  ║ Low      ║ P3       ║ PASS / FAIL / SKIP               ║
 ║ B32  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
 ║ B33  ║ Low      ║ P4       ║ PASS / FAIL / SKIP               ║
+║ B34  ║ High     ║ P2       ║ PASS / FAIL / PARTIAL / SKIP     ║
+║      ║          ║          ║ (PARTIAL = CLI fixed, MCP still  ║
+║      ║          ║          ║ returns bare script exception:)  ║
+║ B35  ║ Medium   ║ P2       ║ PASS / FAIL / SKIP               ║
 ╠══════╩══════════╩══════════╩══════════════════════════════════╣
-║  X PASS   Y FAIL   Z PARTIAL   W SKIP   (33 total)               ║
+║  X PASS   Y FAIL   Z PARTIAL   W SKIP   (35 total)               ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
