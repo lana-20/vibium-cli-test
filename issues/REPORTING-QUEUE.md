@@ -5,6 +5,7 @@ CLI, MCP, JS, Java and Python findings in one place. Update the checkbox and the
 **Filed as** line in the matching write-up whenever something moves.
 
 Last reconciled with upstream: **2026-07-28** · published npm `latest`: **v26.5.31**
+B35 hardened to filing standard 2026-07-28; B24, B30, B34, FR1 write-ups complete.
 
 ---
 
@@ -13,21 +14,33 @@ Last reconciled with upstream: **2026-07-28** · published npm `latest`: **v26.5
 Nothing upstream covers these. Write-ups are complete and every repro has been run
 verbatim.
 
-- [ ] **B35 · `screenshot -o` discards the directory component**
-  Severity Medium · P2 · CLI only
-  All path forms (relative, `./`, `~/`, absolute, nested) flatten to
-  `~/Pictures/Vibium/<basename>`. `pdf`, `storage` and `record stop` all honour theirs,
-  so it is an inconsistency within one CLI. Silent — `--json` reports `ok:true` with the
-  redirected path.
+- [ ] **B35 · `screenshot -o` output path silently discarded; CLI inherits the MCP sandbox**
+  Severity Medium · P2 · CLI only · **fully hardened, ready to file**
+  All path forms flatten to `~/Pictures/Vibium/<basename>`; `pdf`, `storage` and
+  `record stop` honour theirs. Silent — `--json` reports `ok:true`, exit 0.
   → [`B35.md`](B35.md) · **only genuinely novel finding of this batch** · hardened 2026-07-28
   → **Lead with the root cause, not the symptom.** The flattening is deliberate — a
-  path-traversal guard in the shared daemon handler (`agent/handlers.go`). The CLI
-  dispatches through `daemonCall("browser_screenshot", …)`, so it is treated as an
-  untrusted agent surface. The guard is right for MCP and wrong for a user's own shell,
-  and MCP is also the *only* surface with `--screenshot-dir`.
+  path-traversal guard in `agent/handlers.go`. The CLI dispatches through
+  `daemonCall("browser_screenshot", …)`, so it is treated as an untrusted agent surface.
+  The guard is right for MCP and wrong for a user's own shell, and MCP is also the *only*
+  surface with `--screenshot-dir`.
   → Propose a **surface-aware** fix. "Just honour the path" would reintroduce the
   traversal risk on MCP and will be rejected.
-  → Not macOS-specific: `GetScreenshotDir()` uses `Pictures/Vibium` on Linux and Windows too.
+  → **Strongest argument:** every capability the fix needs already ships. Directory trees
+  are created on demand for `--screenshot-dir`; path errors are reported accurately
+  (`permission denied`, `file name too long`); a no-disk mode exists (`--screenshot-dir ""`);
+  and `internal/api/recording.go`'s `WriteRecordToFile` is the in-tree precedent — which
+  is why `record stop -o` works.
+  → **Handle the security angle carefully.** The guard is bypassable: a symlink already at
+  the destination basename is followed. Frame as defence-in-depth, *not* remotely
+  exploitable — planting the link needs write access `browser_screenshot` does not grant.
+  It weakens the rationale for flattening the CLI; it is not an attack to publicise.
+  → Not macOS-specific: `GetScreenshotDir()` uses `Pictures/Vibium` on Linux and Windows.
+  Long-standing, not a regression — predates the Mar-2026 `mcp → agent` rename.
+  → Platform gap has a two-minute answer attached: [`verify-b35/`](verify-b35/) ships
+  `verify-b35.sh` and `verify-b35.ps1`, each printing a paste-ready RESULT BLOCK. Ask a
+  Linux/Windows holder to run one **before or just after filing**; §5 predicts backslash
+  splitting differs by platform.
 
 - [ ] **B24 · `map` misses framework-attached click handlers**
   Severity Medium · P3 · CLI
