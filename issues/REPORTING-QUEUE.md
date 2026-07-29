@@ -78,7 +78,9 @@ verbatim.
   (`--json`/`--verbose`/`--stdin`) unrecoverable, MCP cross-surface confirmation,
   a `try/catch` control proving the data is reachable, 3-site independence,
   **a three-way comparison showing Playwright and Selenium both return the message**
-  (the strongest single argument — this is not a hard problem peers also failed), and the
+  (the strongest single argument — this is not a hard problem peers also failed),
+  **the escalation that the Python and JS clients swallow the exception entirely**
+  (return None/null, never raise — worse than the CLI, which at least exits 1), and the
   [#156](https://github.com/VibiumDev/vibium/issues/156) sibling
   (`failed to annotate: script exception:` — same truncated suffix, likely same helper).
   → [`B34.md`](B34.md)
