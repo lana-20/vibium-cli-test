@@ -39,6 +39,33 @@ vibium init-script --list
 
 MCP: `browser_add_init_script { script }`.
 
+## The engine already speaks the command
+
+This is the part that makes the request small. `script.addPreloadScript` is a **W3C BiDi
+standard command**, and vibium's engine already sends it internally in at least three
+places:
+
+- `clicker/internal/api/handlers_clock.go` — clock installation
+- `clicker/internal/api/handlers_storage.go` — storage seeding
+- `clicker/internal/api/handlers_websocket.go` — *"wsMonitorPreloadScript is injected via
+  script.addPreloadScript to wrap window.WebSocket"*
+
+It also appears in `docs/trackers/arewebidiyet.md` as a tracked BiDi command, and there is
+already a wire-level command for the client-facing version — the JS client calls it
+directly:
+
+```ts
+// clients/javascript/src/context.ts
+async addInitScript(script: string): Promise<string> {
+  const result = await this.client.send('vibium:context.addInitScript', {
+    userContext: this.userContextId, script,
+  });
+```
+
+So the engine implements it, the wire command exists, and three client libraries expose
+it. **Only the CLI and MCP surfaces lack a way to send it.** This is a surface binding,
+not a feature.
+
 ## Why the CLI cannot reach it today
 
 The CLI has no command that executes before page scripts. `eval` runs against a document
@@ -79,19 +106,16 @@ let s = 42;
 Math.random = () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
 ```
 
-Playwright delivers it with `context.addInitScript()`. **Selenium does not even need a
-first-class API** — raw CDP works and reaches the same 0.00%:
-
-```python
-drv.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": SEED})
-```
+Playwright delivers it with `context.addInitScript()`. Selenium 4.46 delivers it through
+the **W3C BiDi standard command** — `driver.script.add_preload_script(fn)`, which sends
+`script.addPreloadScript`. (Selenium 4.44 needed raw CDP; 4.46 has a first-class BiDi API.)
 
 Measured on this AUT, 2026-07-28:
 
 | Tool | Mechanism | Determinism reached |
 |---|---|---|
 | Playwright 1.62 | `context.addInitScript()` | 0.00% |
-| Selenium 4.44 | CDP `Page.addScriptToEvaluateOnNewDocument` | 0.00% |
+| Selenium 4.46 | BiDi `script.addPreloadScript` | 0.00% |
 | vibium 26.5.31 CLI/MCP | **no mechanism** | 0.00% only by accident (see below) |
 
 A Python or Java vibium user can already do the equivalent through
@@ -145,7 +169,7 @@ canvas-testing literature is built on ([arXiv:2208.02335](https://arxiv.org/abs/
 ```sh
 ~/.claude/skills/canvas-demo/scripts/determinism.sh 5                 # vibium, post-load seed
 node ~/.claude/skills/canvas-demo/scripts/compare-playwright.js       # Playwright, addInitScript
-python3 ~/.claude/skills/canvas-demo/scripts/compare-selenium.py      # Selenium, raw CDP
+python3 ~/.claude/skills/canvas-demo/scripts/compare-selenium.py      # Selenium (CDP on 4.44, BiDi on 4.46+)
 ```
 
 Once implemented, `determinism.sh` should reach 0.00% using a registered init script
