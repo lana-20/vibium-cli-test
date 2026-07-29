@@ -4,6 +4,13 @@ Cross-suite tracker for everything worth reporting upstream to VibiumDev/vibium 
 CLI, MCP, JS, Java and Python findings in one place. Update the checkbox and the
 **Filed as** line in the matching write-up whenever something moves.
 
+> **Nothing here goes to `VibiumDev/vibium` without explicit, peer-reviewed approval.**
+> Every write-up is a *draft* until Lana has reviewed it and says to submit. No issue,
+> comment or PR is opened upstream on the strength of this file alone.
+>
+> Pushing to Lana's own repos (`lana-20/*`) is fine and expected — that is where drafts
+> live and get reviewed. The line is the upstream project, not visibility.
+
 Last reconciled with upstream: **2026-07-28** · published npm `latest`: **v26.5.31**
 All five hardened to filing standard 2026-07-28, including a three-way
 vibium/Playwright/Selenium parity pass measured on testtrack.org/canvas-demo.
@@ -85,6 +92,14 @@ verbatim.
   [#156](https://github.com/VibiumDev/vibium/issues/156) sibling
   (`failed to annotate: script exception:` — same truncated suffix, likely same helper).
   → [`B34.md`](B34.md)
+  → **All three client libraries confirmed swallowing** (Python, JS, Java) — they return
+  `None`/`null` and never raise, which is worse than the CLI's empty message because a
+  broken script is indistinguishable from one returning nothing. Verified per client with
+  a `1 + 1` control.
+  → Consequence already actioned in our own suites: two assertions could not distinguish a
+  real null from a thrown exception. Fixed in vibium-js-test `27770fe` and
+  vibium-java-test `04cc720`, both re-verified at baseline (JS 194/3/1, Java 140/0/22).
+  Python was already safe (`is not None`).
 
 - [ ] **B30 → comment on [#112](https://github.com/VibiumDev/vibium/issues/112)** (CLOSED — comments still land)
   Ask that B30 be closed as **fixed by #182**, not "not reproduced". Its `<img>` case is
@@ -171,3 +186,25 @@ build and that is expected, not a regression. When `npm view vibium version` exc
   v26.5.31 unless noted; Linux and Windows are untested.
 - Include a recovery path or workaround when one exists — it sets severity honestly and
   is the difference between B24 (P3, `find` still works) and B16 (no recovery at all).
+
+---
+
+## Submission protocol
+
+Drafts live here and in `lana-20/vibium-cli-test`. Publishing a draft to Lana's own repo
+is not submission — it is where review happens.
+
+Before anything reaches `VibiumDev/vibium`:
+
+1. **Lana reviews the write-up in full.** Every claim in these files is measured, but
+   measured is not the same as ready to send.
+2. **Confirm no duplicate.** `gh search issues --repo VibiumDev/vibium "<keywords>"`.
+   B34 was fully written and hardened before #221 was found already open.
+3. **Re-verify on the installed version.** Several of these were hardened over days; a
+   published release may have moved. `vibium --version && npm view vibium version`.
+4. **Lana gives an explicit instruction to submit**, per item. Approval of one write-up
+   is not approval of the batch.
+5. Update **Filed as:** in the write-up and tick the checkbox here.
+
+Claude does not open issues, post comments, or file PRs upstream on its own initiative —
+including when a draft looks finished and a maintainer thread seems to invite it.
