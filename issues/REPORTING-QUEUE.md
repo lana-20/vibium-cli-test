@@ -140,6 +140,13 @@ build and that is expected, not a regression. When `npm view vibium version` exc
 
 ## F · Internal doc sync — not upstream
 
+- [x] **Audited our own suites for null-expecting `evaluate` assertions** (2026-07-28).
+  While the clients swallow JS exceptions (#221), any assertion expecting null/None passes
+  both when the value is genuinely absent *and* when the script threw. Found exactly one —
+  `context.clearStorage removes localStorage entries` in vibium-js-test — fixed in
+  `27770fe` with a `JSON.stringify` sentinel. The Python suite was already clean
+  (`assert ... is not None`, the safe direction). Java suite not audited.
+
 - [ ] `project_vibium_wiki` memory still says *"CLI bugs: B1–B33 (umbrella issue #112
   covers all 33; no per-bug issues)"* — **stale.** #112 is closed and split; per-bug
   issues exist. Update the wiki's bug-numbering convention and any graph nodes that
