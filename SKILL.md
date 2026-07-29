@@ -1,11 +1,11 @@
 ---
 name: vibium-cli-test
-description: "Regression test suite for 35 known vibium CLI bugs (B1–B35), ordered by priority and severity (P1 Critical first, P4 Low last; B34–B35 appended out of order). Umbrella issue #112 was closed 2026-07-06 and split into one issue per bug — B-numbers are suite labels now, see README for the per-bug issue map. B6, B9, B14, B18, B20, B22, B30, B31 are fixed in source but unpublished, so they FAIL expectedly on v26.5.31. B30's <img> case is a symptom of B6 (hover has no --timeout and a zero default on v26.5.31), fixed by #182. B24 re-established 2026-07-28 with a new repro (coffee-cart.app + self-contained matrix) after its original page 404'd. Known partials: B15, B32. B34 is tracked upstream as #221 and reproduces on MCP too — a CLI-only fix is PARTIAL. Labels PASS/FAIL/PARTIAL/SKIP with exact repro steps and cross-site verification."
+description: "Regression test suite for 36 known vibium CLI bugs (B1–B36), ordered by priority and severity (P1 Critical first, P4 Low last; B34–B35 appended out of order). Umbrella issue #112 was closed 2026-07-06 and split into one issue per bug — B-numbers are suite labels now, see README for the per-bug issue map. B6, B9, B14, B18, B20, B22, B30, B31 are fixed in source but unpublished, so they FAIL expectedly on v26.5.31. B30's <img> case is a symptom of B6 (hover has no --timeout and a zero default on v26.5.31), fixed by #182. B24 re-established 2026-07-28 with a new repro (coffee-cart.app + self-contained matrix) after its original page 404'd. Known partials: B15, B32. B34 is tracked upstream as #221 and reproduces on MCP too — a CLI-only fix is PARTIAL. Labels PASS/FAIL/PARTIAL/SKIP with exact repro steps and cross-site verification."
 ---
 
 # vibium CLI Regression Test Suite
 
-Run all 35 tests and produce a final summary table. B1–B33 are ordered by priority and severity — B1–B7 are P1, B8–B20 are P2, B21–B31 are P3, B32–B33 are P4. **B34 (High · P2) and B35 (Medium · P2) are appended rather than renumbered**, because the B-numbers are cited across upstream issues and prior comments.
+Run all 36 tests and produce a final summary table. B1–B33 are ordered by priority and severity — B1–B7 are P1, B8–B20 are P2, B21–B31 are P3, B32–B33 are P4. **B34 (High · P2), B35 (Medium · P2) and B36 (High · P2) are appended rather than renumbered**, because the B-numbers are cited across upstream issues and prior comments.
 
 **Upstream tracking changed.** The umbrella issue [#112](https://github.com/VibiumDev/vibium/issues/112) was closed 2026-07-06 and split into one issue per bug. B-numbers are labels for this suite now, not a mapping to #112 — see the README for the per-bug issue map.
 
@@ -1283,6 +1283,47 @@ PASS if: reports the true path, or `ok:false` with an error
 FAIL if: reports `{"ok":true,...}` naming the redirected `~/Pictures/Vibium/` location
 
 Not site-dependent — a local path-handling bug, reproducible on any page.
+
+---
+
+### B36 — `page.eval` discards script exceptions (High · P2)
+
+Split out of B34 on 2026-07-28 — a different handler and a different symptom. Affects the
+**client libraries only**; the CLI and MCP take the `bidi.Client.Evaluate()` path and have
+the separate empty-message defect (#221). See [`issues/B36.md`](issues/B36.md).
+
+`Router.handlePageEval` has no `Type == "exception"` check, so a thrown script produces a
+`sendSuccess` with a nil value and the clients return null without raising.
+
+```python
+from vibium import browser
+b = browser.start(headless=True)
+p = b.new_page(); p.go("https://example.com")
+try:
+    p.evaluate("(() => { throw new Error('CUSTOM_MESSAGE_HERE') })()")
+    print("FAIL — no exception raised")
+except Exception as e:
+    print("PASS —", e)
+```
+
+PASS if: an exception is raised carrying `CUSTOM_MESSAGE_HERE`
+FAIL if: the call returns `None` and nothing is raised
+
+**Controls that must keep working:** `p.evaluate("1 + 1")` → `2`, and `p.evaluate("null")`
+→ `None` *without* raising.
+
+**Cross-client check** — all three behave identically; a fix must cover all:
+
+```
+Python   p.evaluate(throwing)        → None, no exception
+JS       await page.evaluate(...)    → null, no throw
+Java     p.evaluate(...)             → null, no exception
+```
+
+**Suite hygiene note.** While this is unfixed, any assertion expecting a null/None result
+from `evaluate` passes whether the value was genuinely absent or the script threw. Two such
+assertions existed in our own suites and were fixed (vibium-js-test `27770fe`,
+vibium-java-test `04cc720`).
 
 ---
 

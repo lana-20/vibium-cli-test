@@ -2,7 +2,7 @@
 
 A Claude Code skill that runs a full regression suite against [vibium](https://www.npmjs.com/package/vibium) — a browser automation CLI built on WebDriver BiDi.
 
-The suite covers **35 bugs**. B1–B33 were originally found in vibium v26.3.18 and verified across 23 sites; B34–B35 were found in v26.5.31.
+The suite covers **36 bugs**. B1–B33 were originally found in vibium v26.3.18 and verified across 23 sites; B34–B35 were found in v26.5.31.
 
 > **The original umbrella issue is closed.** [VibiumDev/vibium#112](https://github.com/VibiumDev/vibium/issues/112) was closed on 2026-07-06 after the maintainers split all 33 bugs into individual issues, one per bug, so each can be tracked and closed by its own PR. **The B-numbers are now labels for this suite, not a mapping to #112.** Per-bug issue numbers are in the table below.
 
@@ -28,7 +28,8 @@ Also: B15 passes (confirmed correct behaviour, regression check only); B32 is de
 
 Two items are tracked here but not filed as bugs:
 
-- [`issues/B34.md`](issues/B34.md) — **already reported upstream as [#221](https://github.com/VibiumDev/vibium/issues/221)**. The file is now a comment draft adding scope evidence, not a new report. Do not file.
+- [`issues/B34.md`](issues/B34.md) — **already reported upstream as [#221](https://github.com/VibiumDev/vibium/issues/221)**. The file is a comment draft adding scope evidence, not a new report. Do not file.
+- [`issues/B36.md`](issues/B36.md) — split out of B34 on 2026-07-28. The client libraries silently returning null is a *different* defect in a different handler with a different symptom, so it gets its own issue rather than riding on #221.
 - [`issues/FR1.md`](issues/FR1.md) — enhancement: expose the existing `BrowserContext.addInitScript` on the CLI and MCP surfaces. A parity gap, not a defect; no test in the suite.
 
 ## Usage
@@ -39,7 +40,7 @@ Install the skill via Claude Code, then run:
 /vibium-cli-test
 ```
 
-Claude will execute all 35 tests against the running vibium daemon and print a summary table.
+Claude will execute all 36 tests against the running vibium daemon and print a summary table.
 
 ## What it tests
 
@@ -80,6 +81,7 @@ Claude will execute all 35 tests against the running vibium daemon and print a s
 | B33 | Low | P4 | `vibium content ""` | Inconsistent error message vs no-arg invocation | [#213](https://github.com/VibiumDev/vibium/issues/213) OPEN |
 | B34 | High | P2 | `vibium eval` / `browser_evaluate` | All exception detail dropped — every error reduced to `script exception:`; reproduces identically on the MCP surface | [#221](https://github.com/VibiumDev/vibium/issues/221) OPEN — do not re-file |
 | B35 | Medium | P2 | `vibium screenshot -o` | Output path silently discarded — CLI routes through the MCP handler and inherits its path-traversal guard; `pdf`/`storage`/`record stop` honour theirs | not yet filed |
+| B36 | High | P2 | `vibium:page.eval` (all client libs) | Script exceptions discarded — `handlePageEval` has no `Type == "exception"` check, so Python/JS/Java return null and never raise | not yet filed |
 
 B34 and B35 are **appended rather than renumbered** into strict priority order. B34 is
 High · P2 and would otherwise sort next to B9. Renumbering is no longer about #112 — that

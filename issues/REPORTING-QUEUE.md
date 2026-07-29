@@ -50,6 +50,21 @@ verbatim.
   Linux/Windows holder to run one **before or just after filing**; §5 predicts backslash
   splitting differs by platform.
 
+- [ ] **B36 · `page.eval` discards script exceptions — all three clients return null**
+  Severity High · P2 · client libraries only
+  Split out of B34 on 2026-07-28. `Router.handlePageEval` has no `Type == "exception"`
+  check, so a thrown script becomes a `sendSuccess` with nil and Python, JS and Java all
+  return null without raising. Distinct from #221 in handler, symptom and affected
+  surfaces — **fixing #221 does not fix this**.
+  → [`B36.md`](B36.md)
+  → File as its own issue, cross-referencing #221. Do not fold it into that thread; it
+  would dilute both.
+  → Strongest supporting detail: the clients' error handling is *correct* — the Python
+  guard raises on any error response, and `p.go("not-a-url://x")` proves it. They are
+  never given an error to raise.
+  → Impact framing that lands: any test asserting a null result passes whether the value
+  was absent or the script threw. Two such assertions existed in our own suites.
+
 - [ ] **B24 · `map` misses framework-attached click handlers**
   Severity Medium · P3 · CLI
   Previously deferred upstream for lack of a stable repro (original page 404s). Now has
@@ -75,6 +90,20 @@ verbatim.
   → [`FR1.md`](FR1.md)
   → File as `enhancement`, not a bug. Reference #130/#167 — `context.addInitScript` is
   already the documented workaround for `page.addScript()` not surviving navigation.
+
+### Recommended order
+
+1. **B34 → comment on #221** — open, zero comments, changes the scope of a fix they have
+   not started. Highest leverage per unit of effort.
+2. **B36** — new issue, High. Post after B34 so the cross-reference in that comment has
+   something to point at.
+3. **B35** — new issue, the only fully independent finding, most heavily hardened.
+4. **B24** — new issue; they explicitly deferred it wanting a stable repro, which we now
+   supply.
+5. **B30 → comment on #112** — cheapest, lowest impact; only stops B30 being closed as
+   "not reproduced" and reopened later.
+6. **FR1** — enhancement. Queues behind defects regardless of quality, and reads better
+   once the evaluate paths are already under discussion.
 
 ## B · Ready to comment — existing issues
 
