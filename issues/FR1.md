@@ -65,7 +65,7 @@ runs.
 
 Measured on `testtrack.org/canvas-demo`, whose `Deploy Vehicle Fleet` places fifty units
 at `Math.random()` positions with random radii. Five identical runs, all ten pairs
-diffed, under both vibium and Playwright:
+diffed, under vibium, Playwright and Selenium:
 
 | Configuration | Run-to-run noise | One-marker defect | Verdict |
 |---|---|---|---|
@@ -79,8 +79,24 @@ let s = 42;
 Math.random = () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
 ```
 
-Playwright delivers it with `context.addInitScript()`. A Python or Java vibium user can
-already do the equivalent. A CLI or MCP user cannot.
+Playwright delivers it with `context.addInitScript()`. **Selenium does not even need a
+first-class API** — raw CDP works and reaches the same 0.00%:
+
+```python
+drv.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": SEED})
+```
+
+Measured on this AUT, 2026-07-28:
+
+| Tool | Mechanism | Determinism reached |
+|---|---|---|
+| Playwright 1.62 | `context.addInitScript()` | 0.00% |
+| Selenium 4.44 | CDP `Page.addScriptToEvaluateOnNewDocument` | 0.00% |
+| vibium 26.5.31 CLI/MCP | **no mechanism** | 0.00% only by accident (see below) |
+
+A Python or Java vibium user can already do the equivalent through
+`context.add_init_script`. A CLI or MCP user cannot — making vibium's agent-facing
+surfaces the only ones in this comparison without a pre-load hook.
 
 ## Why the post-load workaround is not a substitute
 
@@ -127,8 +143,9 @@ canvas-testing literature is built on ([arXiv:2208.02335](https://arxiv.org/abs/
 ## Verification
 
 ```sh
-~/.claude/skills/canvas-demo/scripts/determinism.sh 5             # vibium, post-load seed
-node ~/.claude/skills/canvas-demo/scripts/compare-playwright.js   # Playwright, pre-load seed
+~/.claude/skills/canvas-demo/scripts/determinism.sh 5                 # vibium, post-load seed
+node ~/.claude/skills/canvas-demo/scripts/compare-playwright.js       # Playwright, addInitScript
+python3 ~/.claude/skills/canvas-demo/scripts/compare-selenium.py      # Selenium, raw CDP
 ```
 
 Once implemented, `determinism.sh` should reach 0.00% using a registered init script

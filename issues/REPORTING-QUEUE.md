@@ -5,7 +5,8 @@ CLI, MCP, JS, Java and Python findings in one place. Update the checkbox and the
 **Filed as** line in the matching write-up whenever something moves.
 
 Last reconciled with upstream: **2026-07-28** · published npm `latest`: **v26.5.31**
-B35 hardened to filing standard 2026-07-28; B24, B30, B34, FR1 write-ups complete.
+All five hardened to filing standard 2026-07-28, including a three-way
+vibium/Playwright/Selenium parity pass measured on testtrack.org/canvas-demo.
 
 ---
 
@@ -52,13 +53,18 @@ verbatim.
   elements") was **wrong**. It misses `addEventListener` handlers and ignores
   `cursor:pointer`; static `role`/`tabindex`/`onclick` work fine.
   → Fold in the ui5.sap.com update: CLI `map` improved from 0 refs (2026-05-19 report)
-  to 127, but 91 non-semantic `cursor:pointer` elements remain unexposed.
+  to 137, and **now matches MCP exactly** (137 vs 137; coffee-cart 4 vs 4).
+  → **Do not repeat the "MCP may be more complete" lead** — that was in an earlier draft
+  and is now disproven. Both surfaces share the gap, so one fix covers both.
 
 - [ ] **FR1 · Expose `BrowserContext.addInitScript` on the CLI and MCP surfaces**
   Enhancement — surface parity, not a new capability
   Already implemented and passing in the Python (`context.add_init_script`) and Java
   (`context.addInitScript`) clients; absent from CLI and MCP. Justified by measured
   determinism data: 190× noise-to-signal unseeded vs 0.00% with a pre-load seed.
+  → **Selenium needs no first-class API** — raw CDP `Page.addScriptToEvaluateOnNewDocument`
+  reaches the same 0.00%. So vibium's agent-facing surfaces are the only ones in the
+  comparison without any pre-load mechanism at all.
   → [`FR1.md`](FR1.md)
   → File as `enhancement`, not a bug. Reference #130/#167 — `context.addInitScript` is
   already the documented workaround for `page.addScript()` not surviving navigation.
@@ -70,7 +76,9 @@ verbatim.
   and locates the root cause in `clicker/internal/bidi/script.go`.
   Our comment adds what #221 lacks: the 6-class exception matrix, all flags
   (`--json`/`--verbose`/`--stdin`) unrecoverable, MCP cross-surface confirmation,
-  a `try/catch` control proving the data is reachable, 3-site independence, and the
+  a `try/catch` control proving the data is reachable, 3-site independence,
+  **a three-way comparison showing Playwright and Selenium both return the message**
+  (the strongest single argument — this is not a hard problem peers also failed), and the
   [#156](https://github.com/VibiumDev/vibium/issues/156) sibling
   (`failed to annotate: script exception:` — same truncated suffix, likely same helper).
   → [`B34.md`](B34.md)
