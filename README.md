@@ -109,7 +109,7 @@ Bugs are verified across 23 sites:
 | [practicesoftwaretesting.com](https://practicesoftwaretesting.com/) | B17 (`find role button` on `input[type=submit]`) |
 | [qa-practice.razvanvancea.ro](https://qa-practice.razvanvancea.ro/) | B15 (CSS uppercase ADD TO CART) |
 | ~~blackboxpuzzles.workroomprds.com~~ | ~~B24~~ — **404, retired 2026-07-28**, replaced by coffee-cart.app |
-| [ui5.sap.com](https://ui5.sap.com/#/demoapps) | B24 secondary (91 non-semantic `cursor:pointer` elements unexposed) |
+| [ui5.sap.com](https://ui5.sap.com/#/demoapps) | ~~B24 secondary~~ — retracted; its `cursor:pointer` elements are children of already-mapped links/buttons, not missing targets |
 | [bugeater.web.app](https://bugeater.web.app/) | B18 (fill/type reject negative values) |
 | [compendiumdev.co.uk/apps/iframe-search](http://compendiumdev.co.uk/apps/iframe-search/iframe-search.html) | B5 (select silent false success) |
 | [the-internet.herokuapp.com](http://the-internet.herokuapp.com/) | B19 (frame context), B20 (fill empty string), B28 (upload type guard), B30 (hover non-interactive), B31 (fill range) |
