@@ -79,8 +79,9 @@ verbatim.
   a `try/catch` control proving the data is reachable, 3-site independence,
   **a three-way comparison showing Playwright and Selenium both return the message**
   (the strongest single argument — this is not a hard problem peers also failed),
-  **the escalation that the Python and JS clients swallow the exception entirely**
-  (return None/null, never raise — worse than the CLI, which at least exits 1), and the
+  **the escalation that all three client libraries swallow the exception entirely**
+  (Python, JS and Java all return None/null and never raise — worse than the CLI, which at
+  least exits 1), and the
   [#156](https://github.com/VibiumDev/vibium/issues/156) sibling
   (`failed to annotate: script exception:` — same truncated suffix, likely same helper).
   → [`B34.md`](B34.md)
@@ -145,7 +146,9 @@ build and that is expected, not a regression. When `npm view vibium version` exc
   both when the value is genuinely absent *and* when the script threw. Found exactly one —
   `context.clearStorage removes localStorage entries` in vibium-js-test — fixed in
   `27770fe` with a `JSON.stringify` sentinel. The Python suite was already clean
-  (`assert ... is not None`, the safe direction). Java suite not audited.
+  (`assert ... is not None`, the safe direction). **Java audited too** — one instance,
+  `test("evaluate null", () -> assertEquals(null, page.evaluate("null")))`, fixed the same
+  way. All three clients confirmed to swallow exceptions.
 
 - [ ] `project_vibium_wiki` memory still says *"CLI bugs: B1–B33 (umbrella issue #112
   covers all 33; no per-bug issues)"* — **stale.** #112 is closed and split; per-bug
