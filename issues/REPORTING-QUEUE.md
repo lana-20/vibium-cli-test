@@ -158,6 +158,7 @@ remain fileable from the original batch, both re-verified against the installed 
   passes the check and fails at the *click* (`element not found`), pointing the user at the
   wrong step. Verified.
 
+  → [`B37.md`](B37.md) · drafted 2026-08-07
   → Cross-reference #212 when filing — that is where the defect was named, and it also
   shows the reporter arrived at it from a wrong premise, so lead with the maintainer's own
   words rather than re-deriving.
