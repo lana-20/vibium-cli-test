@@ -29,6 +29,7 @@ Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5
 > | B24 | ready to file | **still valid** — and upstream *named* its blocker (a stable repro page), which this write-up now answers |
 > | FR1 | ready to file | **still valid**, no CLI init-script command exists |
 > | B32 | untracked here | deferred upstream alongside B24, no issue exists — now recorded, recommendation is to leave it |
+> | **B37** | *new 2026-08-07* | **`find` mints a @ref on a miss — the maintainer named this defect himself and sized the fix; unfiled, unfixed, reproduces. Strongest candidate now.** |
 >
 > **B36 is the important correction.** PR #253 ("Route every BiDi script result
 > through one decoder", #221 + #124) rewrote `deserializeScriptResult`, whose new
@@ -51,6 +52,16 @@ Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5
 > page limit — and would have supported a false "no fix commit exists" for #221.
 > Paginating to 198 found it. Trust `state_reason` on the issue over a keyword
 > scan of commits; a round-numbered result set is a truncation smell.
+>
+> **One of our 33 was wrong, and it cost the maintainer real effort.** **B29/#212**
+> is the only item closed `not_planned` rather than `completed` — and not on
+> priority grounds. `hugs` verified against `main` and refuted the premise with
+> source citations: *"the premise does not hold on either half, so this is not the
+> bug it describes."* `map` never filters `disabled`, so `find` and `map` already
+> agreed; and `--selector` is a documented scope, not a filter. **Calibration this
+> demands: premises get checked against source here.** B24 in particular must be
+> filed as an enhancement, not a defect — see its entry for why the same rebuttal
+> would otherwise apply. The one upside is that the same comment handed us B37.
 
 ---
 
@@ -58,7 +69,8 @@ Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5
 
 **Header corrected 2026-08-07: "Nothing upstream covers these" was false.** B35 was
 already covered by #119, and B36 was fixed by the #221 PR. Only **B24** and **FR1**
-remain fileable, both re-verified against the installed build.
+remain fileable from the original batch, both re-verified against the installed build.
+**B37 was added 2026-08-07** and is now the strongest candidate of the three.
 
 - [x] **B35 · ~~`screenshot -o` output path silently discarded~~ — FIXED UPSTREAM, DO NOT FILE**
   **Fixed under [#119](https://github.com/VibiumDev/vibium/issues/119)** (closed 2026-08-03) by
@@ -115,6 +127,41 @@ remain fileable, both re-verified against the installed build.
   → Impact framing that lands: any test asserting a null result passes whether the value
   was absent or the script threw. Two such assertions existed in our own suites.
 
+- [ ] **B37 · `find` mints a `@ref` for a selector that matched nothing, and leaks `<nil>`**
+  Severity Medium · P2 · CLI · **found 2026-08-07 · strongest candidate in this queue**
+
+  → **The maintainer named this defect himself and sized the fix.** Closing #212 (2026-08-02)
+  `hugs` wrote: *"There is one real defect in the neighbourhood, though it is not what was
+  reported: `browserFind` writes a @ref without checking that the lookup returned anything
+  (`handlers.go:1020-1027`), so a miss can still mint a ref. **Worth a 3-line guard.**"*
+  **Unfiled and unfixed** — searched all states, and no commit touches it. This is the rare
+  case where the premise needs no arguing: it is already conceded, in writing, with a file
+  and line reference.
+
+  → **Reproduces on installed v26.5.31, two sites** (example.com, coffee-cart.app):
+  ```
+  vibium find "#no-such-thing-zzz"   →  @e1 <nil>          exit 0
+  ```
+  → **Two symptoms beyond his description**, both worth including: a raw Go `<nil>` leaks
+  into user-facing output, and the command **exits 0** on a miss.
+
+  → **Strongest argument — the correct behaviour already exists in the same command:**
+  | command | on a miss | |
+  |---|---|---|
+  | `find <sel>` | `@e1 <nil>`, exit 0 | ✗ mints a ref |
+  | `find <sel> --all` | `No elements found`, exit 0 | ✓ |
+  | `count <sel>` | `0`, exit 0 | ✓ |
+  The `--all` path in the same subcommand handles the miss correctly, so this is an
+  inconsistency inside one command, not a missing capability.
+
+  → **Downstream impact that lands:** a script doing `find` → check exit code → `click @e1`
+  passes the check and fails at the *click* (`element not found`), pointing the user at the
+  wrong step. Verified.
+
+  → Cross-reference #212 when filing — that is where the defect was named, and it also
+  shows the reporter arrived at it from a wrong premise, so lead with the maintainer's own
+  words rather than re-deriving.
+
 - [ ] **B24 · `map` misses framework-attached click handlers** — ✅ **STILL VALID, and now the
   best-positioned item in this queue.** Re-verified 2026-08-07.
   Reproduces on installed v26.5.31: coffee-cart.app has 10 `[data-test]` elements in the DOM;
@@ -154,6 +201,18 @@ remain fileable, both re-verified against the installed build.
   (2026-06-01), which **predates** #203's pierce work and every other August fix. Whether
   any of those incidentally changed `map`'s element discovery is untested and untestable
   until the next npm publish. Offer to retest on `main`.
+
+  → **⚠ Frame this as an ENHANCEMENT, not a defect — or it will be closed like B29 was.**
+  Closing #212, `hugs` documented how `map` actually works: `mapScript`
+  (`internal/agent/handlers.go:2722-2748`) queries a fixed **interactive selector set**
+  (:2727) and then applies exactly **one** filter — visibility (:2737). It never reads
+  `disabled`/`aria-disabled`, and `--selector` is a *scope*, not a filter. So a plain
+  `<div class="cup-body">` with no `role`/`tabindex`/`onclick` **does not match the
+  selector set at all** — `map` omitting it is that design working as written, not a
+  filter bug. Claiming "`map` has a bug" invites the same source-cited rebuttal B29 got.
+  The defensible ask is: *the interactive-selector strategy cannot see behaviour attached
+  via `addEventListener`, and vibium already has a signal that can (`a11y-tree` reads the
+  accessible name) — consider a fallback.*
 
   Severity Medium · P3 · CLI
   Previously deferred upstream for lack of a stable repro (original page 404s). Now has
