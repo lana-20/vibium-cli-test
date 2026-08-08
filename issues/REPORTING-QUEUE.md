@@ -29,7 +29,7 @@ Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5
 > | B24 | ready to file | **still valid** — and upstream *named* its blocker (a stable repro page), which this write-up now answers |
 > | FR1 | ready to file | **still valid**, no CLI init-script command exists |
 > | B32 | untracked here | deferred upstream alongside B24, no issue exists — now recorded, recommendation is to leave it |
-> | **B37** | *new 2026-08-07* | **`find` mints a @ref on a miss — the maintainer named this defect himself and sized the fix; unfiled, unfixed, reproduces. Strongest candidate now.** |
+> | ~~B37~~ | *new 2026-08-07, dead the same day* | **`find` mints a @ref on a miss — FIXED on `main` 2026-08-03 by #206 (PR #280), one day after `hugs` named it. DO NOT FILE.** |
 >
 > **B36 is the important correction.** PR #253 ("Route every BiDi script result
 > through one decoder", #221 + #124) rewrote `deserializeScriptResult`, whose new
@@ -48,10 +48,14 @@ Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5
 > upstream this active, **re-verification belongs immediately before filing, not
 > at hardening time.** Ten days of drift was enough.
 >
-> **Method note:** the first commit scan returned exactly 100 results — the API
-> page limit — and would have supported a false "no fix commit exists" for #221.
-> Paginating to 198 found it. Trust `state_reason` on the issue over a keyword
-> scan of commits; a round-numbered result set is a truncation smell.
+> **⚠ Method rule, earned four times over: never conclude "unfixed" from a
+> commit-message grep.** Every false negative this session came from grepping commit
+> *titles*, and none of the four fixes contained the searched keyword: #221 was titled
+> after a "shared script result decoder"; #119 "Write screenshots where the CLI was told
+> to"; #240/#158; and B37's fix "Make `is` exit-honest and `find --timeout` real".
+> **Read the relevant source on `main`, and check the issue's `state_reason`.** A
+> commit grep can prove presence, never absence. (Also: a scan returning exactly 100 is
+> the API page limit, not a result — paginate.)
 >
 > **One of our 33 was wrong, and it cost the maintainer real effort.** **B29/#212**
 > is the only item closed `not_planned` rather than `completed` — and not on
@@ -68,9 +72,16 @@ Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5
 ## A · Ready to file — new issues
 
 **Header corrected 2026-08-07: "Nothing upstream covers these" was false.** B35 was
-already covered by #119, and B36 was fixed by the #221 PR. Only **B24** and **FR1**
-remain fileable from the original batch, both re-verified against the installed build.
-**B37 was added 2026-08-07** and is now the strongest candidate of the three.
+covered by #119, B36 by the #221 PR, and B37 — added and killed the same day — by #206.
+**Only B24 and FR1 remain fileable, and both are now confirmed against `main` source,
+not just the installed build:**
+- **B24** — `mapScript()` (`internal/agent/handlers.go:2848`) still queries a fixed
+  interactive-selector list on `main`. A plain `<div class="cup-body">` matches no term
+  in it, so the gap is real *and* the enhancement framing is the correct one.
+- **FR1** — `addInitScript` exists in the engine (`internal/api/handlers_storage.go`,
+  `router.go`) and in the Python/JS/Java clients, but `internal/agent/schema.go` has
+  **zero** occurrences. The capability ships; only the CLI/MCP surfaces lack it, which
+  is exactly the surface-parity ask.
 
 - [x] **B35 · ~~`screenshot -o` output path silently discarded~~ — FIXED UPSTREAM, DO NOT FILE**
   **Fixed under [#119](https://github.com/VibiumDev/vibium/issues/119)** (closed 2026-08-03) by
@@ -127,41 +138,13 @@ remain fileable from the original batch, both re-verified against the installed 
   → Impact framing that lands: any test asserting a null result passes whether the value
   was absent or the script threw. Two such assertions existed in our own suites.
 
-- [ ] **B37 · `find` mints a `@ref` for a selector that matched nothing, and leaks `<nil>`**
-  Severity Medium · P2 · CLI · **found 2026-08-07 · strongest candidate in this queue**
-
-  → **The maintainer named this defect himself and sized the fix.** Closing #212 (2026-08-02)
-  `hugs` wrote: *"There is one real defect in the neighbourhood, though it is not what was
-  reported: `browserFind` writes a @ref without checking that the lookup returned anything
-  (`handlers.go:1020-1027`), so a miss can still mint a ref. **Worth a 3-line guard.**"*
-  **Unfiled and unfixed** — searched all states, and no commit touches it. This is the rare
-  case where the premise needs no arguing: it is already conceded, in writing, with a file
-  and line reference.
-
-  → **Reproduces on installed v26.5.31, two sites** (example.com, coffee-cart.app):
-  ```
-  vibium find "#no-such-thing-zzz"   →  @e1 <nil>          exit 0
-  ```
-  → **Two symptoms beyond his description**, both worth including: a raw Go `<nil>` leaks
-  into user-facing output, and the command **exits 0** on a miss.
-
-  → **Strongest argument — the correct behaviour already exists in the same command:**
-  | command | on a miss | |
-  |---|---|---|
-  | `find <sel>` | `@e1 <nil>`, exit 0 | ✗ mints a ref |
-  | `find <sel> --all` | `No elements found`, exit 0 | ✓ |
-  | `count <sel>` | `0`, exit 0 | ✓ |
-  The `--all` path in the same subcommand handles the miss correctly, so this is an
-  inconsistency inside one command, not a missing capability.
-
-  → **Downstream impact that lands:** a script doing `find` → check exit code → `click @e1`
-  passes the check and fails at the *click* (`element not found`), pointing the user at the
-  wrong step. Verified.
-
-  → [`B37.md`](B37.md) · drafted 2026-08-07
-  → Cross-reference #212 when filing — that is where the defect was named, and it also
-  shows the reporter arrived at it from a wrong premise, so lead with the maintainer's own
-  words rather than re-deriving.
+- [x] **B37 · ~~`find` mints a `@ref` on a miss~~ — FIXED ON `main`, DO NOT FILE**
+  Fixed 2026-08-03 by [#206](https://github.com/VibiumDev/vibium/issues/206) (PR #280,
+  *"Make `is` exit-honest and `find --timeout` real"*), one day after `hugs` named the
+  defect closing #212. The fix was incidental — adding polling to the CSS path so
+  `--timeout` works routed a miss through the error branch. Drafted then killed the same
+  day by its own fact-check; kept as [`B37.md`](B37.md) for the record and for the
+  methodology note it produced.
 
 - [ ] **B24 · `map` misses framework-attached click handlers** — ✅ **STILL VALID, and now the
   best-positioned item in this queue.** Re-verified 2026-08-07.
