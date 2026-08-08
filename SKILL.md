@@ -9,6 +9,17 @@ Run all 36 tests and produce a final summary table. B1–B33 are ordered by prio
 
 **Upstream tracking changed.** The umbrella issue [#112](https://github.com/VibiumDev/vibium/issues/112) was closed 2026-07-06 and split into one issue per bug. B-numbers are labels for this suite now, not a mapping to #112 — see the README for the per-bug issue map.
 
+> **⚠ Upstream states below are stale as of 2026-08-07.** A reconciliation that day
+> found upstream had shipped 198 commits since 2026-06-01, closing a large number of
+> these issues — including #112, #124, #151, #174, #128, #195–#213 and #221, plus
+> #119 and #240 which were never in this table. **The per-bug "Open/Fixed" states in
+> this file were last verified 2026-07-28 and have not been re-audited since.** The
+> reconciled picture, and which write-ups are now dead, is in
+> [`issues/REPORTING-QUEUE.md`](issues/REPORTING-QUEUE.md) — read its banner first.
+> Nothing here is published: installed and npm `latest` are both v26.5.31 (2026-06-01),
+> so every upstream fix is source-only and this suite still FAILs them by design.
+
+
 ## Expected FAILs — do not report as regressions
 
 As of 2026-07-28 the published npm `latest` is **v26.5.31**. These seven are **fixed in source but not published**, so they still FAIL on any installed build. Label them `FAIL (expected — fixed in #NNN, unpublished)` rather than a plain FAIL:

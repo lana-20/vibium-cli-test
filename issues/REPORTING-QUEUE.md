@@ -11,19 +11,62 @@ CLI, MCP, JS, Java and Python findings in one place. Update the checkbox and the
 > Pushing to Lana's own repos (`lana-20/*`) is fine and expected — that is where drafts
 > live and get reviewed. The line is the upstream project, not visibility.
 
-Last reconciled with upstream: **2026-07-28** · published npm `latest`: **v26.5.31**
-All five hardened to filing standard 2026-07-28, including a three-way
-vibium/Playwright/Selenium parity pass measured on testtrack.org/canvas-demo.
+Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5.31**
+
+> ## ⚠ 2026-08-07 reconciliation — most of this queue is now dead
+>
+> Upstream shipped **198 commits since 2026-06-01**, with a burst 2026-08-02→07,
+> in the ten days after the previous reconciliation. **Four of six pending items
+> are fixed upstream and must not be filed**, and the entire §C state table is
+> wrong — every issue it lists as OPEN is now closed.
+>
+> | Item | Was | Now |
+> |---|---|---|
+> | B34 → comment on #221 | "OPEN, 0 comments" | **#221 closed/completed 2026-08-02**, PR #253 |
+> | B36 | "fixing #221 does not fix this" | **fixed by that same PR** — verified in source |
+> | B35 | "Nothing upstream covers these" | **fixed under #119** (`c349fcd`, `ea5c2be`) |
+> | B30 → comment on #112 | pending | #112 and #182 both closed/completed — largely moot |
+> | B24 | ready to file | **still valid**, reproduces on the installed build |
+> | FR1 | ready to file | **still valid**, no CLI init-script command exists |
+>
+> **B36 is the important correction.** PR #253 ("Route every BiDi script result
+> through one decoder", #221 + #124) rewrote `deserializeScriptResult`, whose new
+> doc line reads *"A thrown exception is surfaced as an error rather than null."*
+> `handlePageEval` calls it and `sendError`s on failure — which is exactly B36's
+> defect. The maintainer independently shipped the broader shared-decoder fix
+> that B34's comment was going to argue for. **#124 (§C) is fixed by the same PR.**
+>
+> **Nothing above is published.** Installed and npm `latest` are both v26.5.31
+> (2026-06-01), so every fix is source-only and the local suites still FAIL these
+> — expected, not a regression. **§E is now much larger than the 8 bugs it lists.**
+>
+> **Process lesson, worth more than any single item:** the protocol here was
+> *followed* — "search before writing" and "re-verify on the installed version"
+> were both done at hardening time — and it still produced four dead drafts. On an
+> upstream this active, **re-verification belongs immediately before filing, not
+> at hardening time.** Ten days of drift was enough.
+>
+> **Method note:** the first commit scan returned exactly 100 results — the API
+> page limit — and would have supported a false "no fix commit exists" for #221.
+> Paginating to 198 found it. Trust `state_reason` on the issue over a keyword
+> scan of commits; a round-numbered result set is a truncation smell.
 
 ---
 
 ## A · Ready to file — new issues
 
-Nothing upstream covers these. Write-ups are complete and every repro has been run
-verbatim.
+**Header corrected 2026-08-07: "Nothing upstream covers these" was false.** B35 was
+already covered by #119, and B36 was fixed by the #221 PR. Only **B24** and **FR1**
+remain fileable, both re-verified against the installed build.
 
-- [ ] **B35 · `screenshot -o` output path silently discarded; CLI inherits the MCP sandbox**
-  Severity Medium · P2 · CLI only · **fully hardened, ready to file**
+- [x] **B35 · ~~`screenshot -o` output path silently discarded~~ — FIXED UPSTREAM, DO NOT FILE**
+  **Fixed under [#119](https://github.com/VibiumDev/vibium/issues/119)** (closed 2026-08-03) by
+  `c349fcd` "Write screenshots where the CLI was told to" and `ea5c2be` (same for pdf/record).
+  **The shipped fix is the surface-aware design this write-up proposed**: the CLI resolves `-o`
+  itself and sends an absolute path; a bare filename still goes to the screenshot dir, keeping the
+  MCP default intact. **#119 was an existing open issue this queue's duplicate check missed** —
+  the entry below claimed "Nothing upstream covers these." Original notes kept for the record:
+  Severity Medium · P2 · CLI only
   All path forms flatten to `~/Pictures/Vibium/<basename>`; `pdf`, `storage` and
   `record stop` honour theirs. Silent — `--json` reports `ok:true`, exit 0.
   → [`B35.md`](B35.md) · **only genuinely novel finding of this batch** · hardened 2026-07-28
@@ -50,7 +93,13 @@ verbatim.
   Linux/Windows holder to run one **before or just after filing**; §5 predicts backslash
   splitting differs by platform.
 
-- [ ] **B36 · `page.eval` discards script exceptions — all three clients return null**
+- [x] **B36 · ~~`page.eval` discards script exceptions~~ — FIXED UPSTREAM, DO NOT FILE**
+  **Fixed by PR #253** (`8c70929`, "Route every BiDi script result through one decoder", #221+#124).
+  Verified in source: `deserializeScriptResult`'s new doc reads *"A thrown exception is surfaced as
+  an error rather than null"*, and `handlePageEval` calls it then `sendError`s — exactly this defect.
+  **This entry's core claim — "fixing #221 does not fix this" — is now wrong.** It was right about
+  the original report's scope; the actual fix went broader, which is what B34's comment intended to
+  argue for. Original notes kept for the record:
   Severity High · P2 · client libraries only
   Split out of B34 on 2026-07-28. `Router.handlePageEval` has no `Type == "exception"`
   check, so a thrown script becomes a `sendSuccess` with nil and Python, JS and Java all
@@ -65,7 +114,9 @@ verbatim.
   → Impact framing that lands: any test asserting a null result passes whether the value
   was absent or the script threw. Two such assertions existed in our own suites.
 
-- [ ] **B24 · `map` misses framework-attached click handlers**
+- [ ] **B24 · `map` misses framework-attached click handlers** — ✅ **STILL VALID, re-verified 2026-08-07**
+  Reproduces on installed v26.5.31: coffee-cart.app has 10 `[data-test]` elements in the DOM;
+  `map` returns 4 (3 nav links + checkout). No upstream commits touch `map`/handler detection.
   Severity Medium · P3 · CLI
   Previously deferred upstream for lack of a stable repro (original page 404s). Now has
   a self-contained `vibium content` signal matrix that cannot rot, plus coffee-cart.app
@@ -79,7 +130,8 @@ verbatim.
   → **Do not repeat the "MCP may be more complete" lead** — that was in an earlier draft
   and is now disproven. Both surfaces share the gap, so one fix covers both.
 
-- [ ] **FR1 · Expose `BrowserContext.addInitScript` on the CLI and MCP surfaces**
+- [ ] **FR1 · Expose `BrowserContext.addInitScript` on the CLI and MCP surfaces** — ✅ **STILL VALID, re-verified 2026-08-07**
+  No init-script command exists on the CLI (`--help` confirms); no upstream commits add one.
   Enhancement — surface parity, not a new capability
   Already implemented and passing in the Python (`context.add_init_script`) and Java
   (`context.addInitScript`) clients; absent from CLI and MCP. Justified by measured
@@ -93,21 +145,29 @@ verbatim.
 
 ### Recommended order
 
-1. **B34 → comment on #221** — open, zero comments, changes the scope of a fix they have
-   not started. Highest leverage per unit of effort.
-2. **B36** — new issue, High. Post after B34 so the cross-reference in that comment has
-   something to point at.
-3. **B35** — new issue, the only fully independent finding, most heavily hardened.
-4. **B24** — new issue; they explicitly deferred it wanting a stable repro, which we now
-   supply.
-5. **B30 → comment on #112** — cheapest, lowest impact; only stops B30 being closed as
-   "not reproduced" and reopened later.
-6. **FR1** — enhancement. Queues behind defects regardless of quality, and reads better
-   once the evaluate paths are already under discussion.
+**Superseded 2026-08-07.** Items 1, 2, 3 and 5 below are dead (see the banner).
+The live order is now just:
+
+1. **B24** — new issue; upstream explicitly deferred it wanting a stable repro, which
+   this write-up now supplies. Re-verified reproducing.
+2. **FR1** — enhancement, queues behind defects as always. Re-verified absent.
+
+Original order kept below for the record, struck through:
+
+1. ~~B34 → comment on #221~~ — #221 is closed/completed.
+2. ~~B36~~ — fixed by the same PR.
+3. ~~B35~~ — fixed under #119.
+4. **B24** — still live.
+5. ~~B30 → comment on #112~~ — #112/#182 closed; largely moot.
+6. **FR1** — still live.
 
 ## B · Ready to comment — existing issues
 
-- [ ] **B34 → comment on [#221](https://github.com/VibiumDev/vibium/issues/221)** (OPEN, 0 comments)
+- [x] **B34 → ~~comment on #221~~ — CLOSED/COMPLETED 2026-08-02, DO NOT COMMENT**
+  Fixed by PR #253 (`8c70929`), which also closes #124 and B36. The recommended-order entry below
+  calls this "highest leverage per unit of effort" on the strength of it being open with zero
+  comments — that is no longer true. Original notes:
+  ~~(OPEN, 0 comments)~~
   `eval` drops all exception detail. **Do not file a duplicate** — #221 already has it,
   and locates the root cause in `clicker/internal/bidi/script.go`.
   Our comment adds what #221 lacks: the 6-class exception matrix, all flags
@@ -130,7 +190,10 @@ verbatim.
   vibium-java-test `04cc720`, both re-verified at baseline (JS 194/3/1, Java 140/0/22).
   Python was already safe (`is not None`).
 
-- [ ] **B30 → comment on [#112](https://github.com/VibiumDev/vibium/issues/112)** (CLOSED — comments still land)
+- [ ] **B30 → comment on [#112](https://github.com/VibiumDev/vibium/issues/112)** — ⚠️ **largely moot, re-verified 2026-08-07**
+  #112 and #182 are both closed/completed. The comment's purpose was to stop B30 being closed as
+  "not reproduced"; with #182 landed that risk is mostly gone. File only if a reopen actually happens.
+  ~~(CLOSED — comments still land)~~
   Ask that B30 be closed as **fixed by #182**, not "not reproduced". Its `<img>` case is
   B6: `hover` has no `--timeout` and a zero default on v26.5.31, so it never auto-waits;
   an `<img>` is just the most common briefly-zero-size element. `dblclick` and `check`
@@ -138,9 +201,25 @@ verbatim.
   uncached image on a published build.
   → [`B30.md`](B30.md)
 
-## C · Filed, awaiting maintainer
+## C · Filed — ALL NOW CLOSED (table below is stale, kept for history)
 
-No action needed unless they go stale. Recheck when a build newer than v26.5.31 ships.
+**Re-checked 2026-08-07: every issue in this table is now closed.** The "State" column
+below says OPEN throughout and is wrong. Verified states:
+
+| Item | Issue | Actual state 2026-08-07 |
+|---|---|---|
+| CLI B3 · click/dialog deadlock | #151 | **closed/completed** |
+| CLI B8, B10–B13, B16–B29, B33 | #195–#213 | **closed/completed** (sampled #195, #196, #213) |
+| JS Bug 2 · `evaluate` nested `string[][]` | #124 | **closed/completed** — same PR #253 as #221 |
+| Java B3 · `waitForFunction` double-wrap | #174 | **closed/completed** |
+| Java B7 · `page.expose()` | #135 | **closed/duplicate** |
+| Java B10 · `setHeaders` deadlock | #128 | **closed/completed** |
+
+§C1's four (#129, #130, #136, #137) are also all **closed/completed** now — the
+"decide whether to request a reopen" question is moot unless a residual failure
+survives the next publish.
+
+Original table follows, unedited.
 
 | Item | Issue | State | Note |
 |---|---|---|---|
@@ -163,7 +242,32 @@ reopen** — the residual failures are real and currently untracked by any open 
 
 ## D · Do not file — investigated and rejected
 
-Kept so they are not re-raised. Both cost real time before being ruled out.
+Kept so they are not re-raised. All cost real time before being ruled out.
+
+- [x] **`vibium pipe --connect` fails against a live BiDi endpoint** — **already
+  reported and already fixed upstream; do not file.** Raised during the
+  vibium-efficiency CLI batching work and flagged there as "a real, specific,
+  reproducible bug that deserves its own report." Both halves of that were wrong:
+  - **Already filed twice, both closed/completed**: **#240** ("Remote connect mode
+    broken: session.new rejected on endpoints that already have a session", closed
+    2026-08-01 — **opened by the maintainer himself**) and **#158** (`pipe --connect`
+    disconnects immediately after browser launch, closed 2026-08-04, fixed by
+    `102a320`). It still reproduces locally only because nothing is published.
+  - **The original diagnosis was mis-targeted.** It was framed as "`--connect`
+    won't attach to the daemon's existing session" — that is a *feature request*,
+    not a defect. `--connect` is documented as "connect to a remote BiDi endpoint,"
+    and negotiating a session there is correct behaviour.
+  - **The real manifestation, which is what #240 describes**: `vibium pipe
+    --connect ws://localhost:9515` against `vibium serve` — pipe's own help-text
+    example, on serve's default port — fails with `BiDi error: session not
+    created`, because serve auto-creates a session on connect and pipe sends
+    `session.new` anyway. Confirmed 2026-08-07: a raw WebSocket to that endpoint
+    receives live `browsingContext.contextCreated` events, and sending
+    `session.new` by hand reproduces the identical error. The *mechanism* was
+    right; the *target* was not.
+  - Corrected in `vibium-efficiency/references/upstream-report-node-wrapper.md`,
+    which had carried the "deserves its own report" claim into a document headed
+    upstream.
 
 - [x] **`eval` "leaks" `const`/`let` across invocations** — **not a bug.** The scope is
   document-lifetime and clears on reload and navigation, which is correct JS semantics.
@@ -209,6 +313,15 @@ build and that is expected, not a regression. When `npm view vibium version` exc
   completed the split on 2026-07-06. Do not open another umbrella issue.
 - **Search before writing.** B34 was fully written and hardened before #221 was found
   already open. Check `gh search issues --repo VibiumDev/vibium "<keywords>"` first.
+- **Search again immediately before filing, not just before writing.** Added
+  2026-08-07 after four hardened drafts died in the ten days between hardening and
+  filing. Searching once at write time is what let B35 be hardened against #119 and
+  `pipe --connect` against #240 — both already open at the time. Re-run the search,
+  and check `state_reason` (`completed` vs `not_planned`) rather than open/closed
+  alone.
+- **Scan commits with pagination.** A single `gh api .../commits` page caps at 100
+  and will silently support a false "no fix exists." An exactly-100 result set is a
+  truncation smell, not a finding.
 - vibium is **WebDriver BiDi, not CDP**. Do not cite CDP field names in suggested fixes;
   an earlier draft of B34 got this wrong.
 - Always state the platform and version scope. Everything here is macOS darwin 25.5.0 on

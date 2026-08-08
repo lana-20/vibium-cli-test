@@ -8,6 +8,17 @@ The suite covers **36 bugs**. B1–B33 were originally found in vibium v26.3.18 
 
 Each test produces a `PASS / FAIL / PARTIAL / SKIP` result and includes exact repro steps and error strings so a developer can reproduce failures without running the suite.
 
+> **⚠ Upstream states below are stale as of 2026-08-07.** A reconciliation that day
+> found upstream had shipped 198 commits since 2026-06-01, closing a large number of
+> these issues — including #112, #124, #151, #174, #128, #195–#213 and #221, plus
+> #119 and #240 which were never in this table. **The per-bug "Open/Fixed" states in
+> this file were last verified 2026-07-28 and have not been re-audited since.** The
+> reconciled picture, and which write-ups are now dead, is in
+> [`issues/REPORTING-QUEUE.md`](issues/REPORTING-QUEUE.md) — read its banner first.
+> Nothing here is published: installed and npm `latest` are both v26.5.31 (2026-06-01),
+> so every upstream fix is source-only and this suite still FAILs them by design.
+
+
 ## Status as of 2026-07-28 · published npm `latest` = v26.5.31
 
 Three distinct states, and the middle one matters when reading suite output:
