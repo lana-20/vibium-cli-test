@@ -26,8 +26,9 @@ Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5
 > | B36 | "fixing #221 does not fix this" | **fixed by that same PR** — verified in source |
 > | B35 | "Nothing upstream covers these" | **fixed under #119** (`c349fcd`, `ea5c2be`) |
 > | B30 → comment on #112 | pending | #112 and #182 both closed/completed — largely moot |
-> | B24 | ready to file | **still valid**, reproduces on the installed build |
+> | B24 | ready to file | **still valid** — and upstream *named* its blocker (a stable repro page), which this write-up now answers |
 > | FR1 | ready to file | **still valid**, no CLI init-script command exists |
+> | B32 | untracked here | deferred upstream alongside B24, no issue exists — now recorded, recommendation is to leave it |
 >
 > **B36 is the important correction.** PR #253 ("Route every BiDi script result
 > through one decoder", #221 + #124) rewrote `deserializeScriptResult`, whose new
@@ -114,9 +115,46 @@ remain fileable, both re-verified against the installed build.
   → Impact framing that lands: any test asserting a null result passes whether the value
   was absent or the script threw. Two such assertions existed in our own suites.
 
-- [ ] **B24 · `map` misses framework-attached click handlers** — ✅ **STILL VALID, re-verified 2026-08-07**
+- [ ] **B24 · `map` misses framework-attached click handlers** — ✅ **STILL VALID, and now the
+  best-positioned item in this queue.** Re-verified 2026-08-07.
   Reproduces on installed v26.5.31: coffee-cart.app has 10 `[data-test]` elements in the DOM;
-  `map` returns 4 (3 nav links + checkout). No upstream commits touch `map`/handler detection.
+  `map` returns 4 (3 nav links + checkout). No upstream commits touch `map` handler detection.
+
+  → **The maintainer named the exact blocker, and this write-up answers it.**
+  `vincebln2` on #112 (2026-07-06) split 33 bugs into individual issues and listed:
+  *"**Deferred:** B24 (test site 404s, needs a stable repro page), B32 (minor UX,
+  skipping for now)."* B24 is **absent from the "Individual issues filed" list**
+  (B8/#198 … B33/#213) — confirmed, so **no upstream issue exists for it**. The
+  deferral reason is a stable repro page, which is precisely what this write-up now
+  supplies. Lead with that.
+
+  → **NEW, strongest argument — vibium's own `a11y-tree` already sees what `map` misses.**
+  Measured 2026-08-07 on coffee-cart.app: `a11y-tree` returns all 9 cups as named nodes
+  (`{"role":"generic","name":"Espresso"}`, `"Cappuccino"`, `"Mocha"` …); `map` returns
+  **0** of them. The cups carry `aria-label` (→ accessible name "Espresso"). This is the
+  same "every capability the fix needs already ships" argument that carried B35 — and it
+  is **BiDi-native, no CDP required**, which matters given the filing convention below.
+
+  → **State the honest limit, or the argument overreaches.** The cups' a11y role is
+  `generic`, not `button`/`link` — so `a11y-tree` shows they are *named and present*, not
+  that they are *interactive*. A strict role-based "map interactive elements" contract
+  would legitimately skip them. The defensible framing is therefore: the page's primary
+  interaction target has **no static signal at all** (verified: no inline `onclick`, no
+  `role`, no `tabindex`, `cursor: auto` — behaviour attached purely via
+  `addEventListener`), so `map` returns nothing for it and an agent cannot drive the
+  page's main function, while `a11y-tree` and `find` both still work. Do **not** claim
+  a11y-tree proves interactivity.
+
+  → **Distinct from #203, and say so pre-emptively.** #203 (`map` misses Web Component
+  shadow DOM, = B16) is **closed/completed 2026-08-03**. Different mechanism, and
+  irrelevant to this repro: coffee-cart.app has **0 shadow roots and 0 custom elements**
+  (verified). Cross-reference it so this isn't closed as a duplicate.
+
+  → **Caveat to disclose when filing:** verification is on installed v26.5.31
+  (2026-06-01), which **predates** #203's pierce work and every other August fix. Whether
+  any of those incidentally changed `map`'s element discovery is untested and untestable
+  until the next npm publish. Offer to retest on `main`.
+
   Severity Medium · P3 · CLI
   Previously deferred upstream for lack of a stable repro (original page 404s). Now has
   a self-contained `vibium content` signal matrix that cannot rot, plus coffee-cart.app
@@ -129,6 +167,18 @@ remain fileable, both re-verified against the installed build.
   to 137, and **now matches MCP exactly** (137 vs 137; coffee-cart 4 vs 4).
   → **Do not repeat the "MCP may be more complete" lead** — that was in an earlier draft
   and is now disproven. Both surfaces share the gap, so one fix covers both.
+
+- [ ] **B32 · serve port-conflict hint** — ⚠️ **untracked here until 2026-08-07; deferred upstream, no issue exists**
+  Surfaced by re-reading #112's split comment: `vincebln2` deferred **both** B24 and B32
+  — *"B32 (minor UX, skipping for now)"* — and B32, like B24, is **absent from the
+  "Individual issues filed" list**, so nothing upstream tracks it. This queue listed B32
+  only as a "known partial" in the suite description and never carried it as a reportable
+  item, so the deferral went unnoticed.
+  → **Recommendation: leave it deferred.** "Minor UX, skipping for now" is a soft defer,
+  not a rejection, but it is P4 and the maintainer has already weighed it. Filing it
+  against their stated judgement spends credibility that B24 and FR1 need more. Revisit
+  only if it starts blocking something real.
+  → Recorded here so the deferral is a *decision on file* rather than an omission.
 
 - [ ] **FR1 · Expose `BrowserContext.addInitScript` on the CLI and MCP surfaces** — ✅ **STILL VALID, re-verified 2026-08-07**
   No init-script command exists on the CLI (`--help` confirms); no upstream commits add one.
