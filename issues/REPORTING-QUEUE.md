@@ -429,6 +429,21 @@ build and that is expected, not a regression. When `npm view vibium version` exc
 Drafts live here and in `lana-20/vibium-cli-test`. Publishing a draft to Lana's own repo
 is not submission — it is where review happens.
 
+**Step 0, added 2026-08-08 — run the source verifier.** Upstream ships daily, so
+"hardened last week" is not evidence about this week. Download or pull a current
+source tree and run:
+
+```sh
+python3 scripts/verify_upstream.py '<path-to-vibium-source>' --issues
+```
+
+It reports **STILL VALID / FIXED / CHANGED / UNKNOWN** per item by reading *source*,
+never commit messages, and **aborts if the checkout is stale** (it asserts landmark
+fixes with known landing dates first — verifying against an old tree reports fixed
+bugs as still-valid, which is precisely how four hardened drafts died on 2026-08-07).
+`UNKNOWN` means the anchor moved and nothing can be concluded — it is never rounded
+up to "still valid". Claims live in `issues/UPSTREAM-CLAIMS.json`.
+
 Before anything reaches `VibiumDev/vibium`:
 
 1. **Lana reviews the write-up in full.** Every claim in these files is measured, but

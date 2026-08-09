@@ -1,0 +1,136 @@
+{
+  "_readme": [
+    "Machine-checkable claims for scripts/verify_upstream.py.",
+    "",
+    "WHY THIS EXISTS: on 2026-08-07 a reconciliation found 7 of 9 filing candidates",
+    "already fixed upstream. Every false 'still valid' had come from grepping commit",
+    "messages or trusting a stale local view. Upstream now ships daily, so a draft",
+    "hardened last week is not evidence about this week.",
+    "",
+    "THE RULE THIS ENCODES: a claim is verified against SOURCE, never against commit",
+    "titles. Each item names a file and a pattern whose presence or absence decides",
+    "whether the bug still exists. If the file or anchor is missing, the verdict is",
+    "UNKNOWN -- never 'still valid'. Absence of evidence is not evidence of absence.",
+    "",
+    "USAGE:",
+    "  python3 scripts/verify_upstream.py '/path/to/vibium-source'",
+    "  python3 scripts/verify_upstream.py '/path/to/vibium-source' --issues   # also check issue states via gh",
+    "",
+    "Run this immediately before filing anything. Not at hardening time -- ten days",
+    "of drift was enough to kill four hardened drafts."
+  ],
+
+  "landmarks": {
+    "_why": [
+      "Guards against the worst failure: running the verifier on a stale checkout and",
+      "reading its answers as current. Each landmark is a fix known to have landed on",
+      "a date; if a landmark is missing, the checkout predates it and every 'still",
+      "valid' below is suspect."
+    ],
+    "checks": [
+      {
+        "landed": "2026-08-02",
+        "issue": 221,
+        "desc": "shared BiDi script-result decoder (PR #253)",
+        "file": "clicker/internal/api/handlers_state.go",
+        "pattern": "thrown exception is surfaced as an error"
+      },
+      {
+        "landed": "2026-08-03",
+        "issue": 206,
+        "desc": "find --timeout polling; incidentally fixed the ref-on-miss (B37)",
+        "file": "clicker/internal/agent/handlers.go",
+        "pattern": "single non-polling call also returned nil"
+      },
+      {
+        "landed": "2026-08-07",
+        "issue": null,
+        "desc": "Firefox support (#307)",
+        "file": "clicker/internal",
+        "pattern": "irefox",
+        "is_dir": true
+      }
+    ]
+  },
+
+  "items": [
+    {
+      "id": "B24",
+      "title": "map misses framework-attached click handlers",
+      "status": "live",
+      "writeup": "issues/B24.md",
+      "issue": null,
+      "note": "Deferred on #112 2026-07-06 pending a stable repro page; no upstream issue exists.",
+      "source_check": {
+        "file": "clicker/internal/agent/handlers.go",
+        "pattern": "const interactive = 'a\\[href\\], button, input",
+        "expect": "present",
+        "means_if_present": "mapScript still queries a fixed interactive-selector list, so a plain div with no role/tabindex/onclick cannot be discovered -- B24 STILL VALID (and confirms the enhancement framing)",
+        "means_if_absent": "the selector strategy changed -- re-read mapScript before filing"
+      },
+      "secondary_check": {
+        "file": "clicker/internal/agent/handlers.go",
+        "scope_func": "mapScript",
+        "pattern": "aria-label|accessibleName|ariaLabel",
+        "expect": "absent",
+        "means_if_absent": "map still ignores accessible names, which is the fix B24 proposes",
+        "means_if_present": "map now consults accessible names -- B24 may be FIXED, retest live"
+      }
+    },
+    {
+      "id": "FR1",
+      "title": "expose BrowserContext.addInitScript on the CLI and MCP surfaces",
+      "status": "live",
+      "writeup": "issues/FR1.md",
+      "issue": null,
+      "note": "Enhancement, surface parity. Engine and all three clients already have it.",
+      "source_check": {
+        "file": "clicker/internal/agent",
+        "is_dir": true,
+        "pattern": "addInitScript|AddInitScript",
+        "expect": "absent",
+        "means_if_absent": "the agent surface (CLI+MCP) still lacks it -- FR1 STILL VALID",
+        "means_if_present": "an agent-surface binding now exists -- FR1 likely FIXED"
+      },
+      "secondary_check": {
+        "file": "clicker/internal/api",
+        "is_dir": true,
+        "pattern": "addInitScript|AddInitScript",
+        "expect": "present",
+        "means_if_present": "the engine implements it, so this is surface exposure only -- the strongest form of the ask",
+        "means_if_absent": "the engine no longer implements it; FR1's premise changed"
+      }
+    },
+
+    {
+      "id": "B37",
+      "title": "find mints a @ref for a CSS selector that matched nothing",
+      "status": "fixed",
+      "writeup": "issues/B37.md",
+      "issue": 206,
+      "note": "Kept as a regression guard. If this ever reads STILL VALID again, the fix was reverted.",
+      "source_check": {
+        "file": "clicker/internal/agent/handlers.go",
+        "pattern": "element not found: %s \\(timeout %s\\)",
+        "expect": "present",
+        "means_if_present": "the CSS path errors on a miss -- B37 remains FIXED, correct",
+        "means_if_absent": "REGRESSION -- the CSS find path no longer errors on a miss"
+      }
+    },
+    {
+      "id": "B36",
+      "title": "page.eval discards script exceptions",
+      "status": "fixed",
+      "writeup": "issues/B36.md",
+      "issue": 221,
+      "note": "Kept as a regression guard.",
+      "source_check": {
+        "file": "clicker/internal/api/handlers_state.go",
+        "pattern": "thrown exception is surfaced as an error",
+        "expect": "present",
+        "means_if_present": "the shared decoder still surfaces exceptions -- B36 remains FIXED",
+        "means_if_absent": "REGRESSION -- exceptions may be swallowed again"
+      }
+    }
+  ]
+}
