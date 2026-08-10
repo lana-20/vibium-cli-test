@@ -19,7 +19,6 @@
     "Run this immediately before filing anything. Not at hardening time -- ten days",
     "of drift was enough to kill four hardened drafts."
   ],
-
   "landmarks": {
     "_why": [
       "Guards against the worst failure: running the verifier on a stale checkout and",
@@ -52,7 +51,6 @@
       }
     ]
   },
-
   "items": [
     {
       "id": "B24",
@@ -101,7 +99,6 @@
         "means_if_absent": "the engine no longer implements it; FR1's premise changed"
       }
     },
-
     {
       "id": "B37",
       "title": "find mints a @ref for a CSS selector that matched nothing",
@@ -130,6 +127,36 @@
         "expect": "present",
         "means_if_present": "the shared decoder still surfaces exceptions -- B36 remains FIXED",
         "means_if_absent": "REGRESSION -- exceptions may be swallowed again"
+      }
+    },
+    {
+      "id": "B38",
+      "title": "BiDi error detail discarded; error code printed twice",
+      "status": "live",
+      "writeup": "issues/B38.md",
+      "issue": null,
+      "note": "New 2026-08-09. Verified by building main @ 59e4b4b, not by reading commits. Parse defect in bidi.GetError, not a formatting bug.",
+      "source_check": {
+        "file": "clicker/internal/bidi/protocol.go",
+        "pattern": "return &ErrorData\\{Error: errStr, Message: errStr\\}",
+        "expect": "present",
+        "means_if_present": "GetError still fabricates the detail by copying the error code, so the sibling `message` is discarded and the code prints twice -- B38 STILL VALID",
+        "means_if_absent": "the fallback changed -- re-read GetError before filing; the fix may have landed"
+      },
+      "secondary_check": {
+        "file": "clicker/internal/bidi/protocol.go",
+        "scope_func": "GetError",
+        "pattern": "ErrMessage",
+        "expect": "absent",
+        "means_if_absent": "GetError consults no sibling-message field, so BiDi's top-level `message` is never read -- confirms the root cause is a parse defect, not formatting",
+        "means_if_present": "a sibling-message field is now read in GetError -- the fix may have landed, re-verify"
+      },
+      "tertiary_check": {
+        "file": "clicker/internal/bidi/session.go",
+        "pattern": "BiDi error: %s - %s",
+        "expect": "present",
+        "means_if_present": "the doubling formatter is still the single funnel for SendCommand errors (responseOrError)",
+        "means_if_absent": "the formatter moved -- symptom may differ, root cause unchanged"
       }
     }
   ]

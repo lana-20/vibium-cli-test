@@ -11,7 +11,7 @@ CLI, MCP, JS, Java and Python findings in one place. Update the checkbox and the
 > Pushing to Lana's own repos (`lana-20/*`) is fine and expected — that is where drafts
 > live and get reviewed. The line is the upstream project, not visibility.
 
-Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5.31**
+Last reconciled with upstream: **2026-08-09** (B38 added; `--connect` re-confirmed fixed) · published npm `latest`: **v26.5.31**
 
 > ## ⚠ 2026-08-07 reconciliation — most of this queue is now dead
 >
@@ -73,8 +73,8 @@ Last reconciled with upstream: **2026-08-07** · published npm `latest`: **v26.5
 
 **Header corrected 2026-08-07: "Nothing upstream covers these" was false.** B35 was
 covered by #119, B36 by the #221 PR, and B37 — added and killed the same day — by #206.
-**Only B24 and FR1 remain fileable, and both are now confirmed against `main` source,
-not just the installed build:**
+**B24 and FR1 remain fileable, both confirmed against `main` source rather than the
+installed build — and B38 joins them as of 2026-08-09, verified by building `main` itself:**
 - **B24** — `mapScript()` (`internal/agent/handlers.go:2848`) still queries a fixed
   interactive-selector list on `main`. A plain `<div class="cup-body">` matches no term
   in it, so the gap is real *and* the enhancement framing is the correct one.
@@ -82,6 +82,18 @@ not just the installed build:**
   `router.go`) and in the Python/JS/Java clients, but `internal/agent/schema.go` has
   **zero** occurrences. The capability ships; only the CLI/MCP surfaces lack it, which
   is exactly the surface-parity ask.
+
+- [ ] **B38 · BiDi error detail discarded; error code printed twice** — ✅ **NEW 2026-08-09,
+  live on `main` @ `59e4b4b`, verified by building it.** `vibium go "not-a-real-url"` prints
+  `BiDi error: invalid argument - invalid argument`; Chrome sent `Invalid URL: not-a-real-url`.
+  Cause is a **parse** defect, not formatting: `Message` (`internal/bidi/protocol.go:43-52`)
+  has no field for BiDi's *sibling* `message`, so it is dropped by `encoding/json`; `GetError`
+  (`:70-86`) then targets a nested shape that never arrives, so its fallback fabricates the
+  detail by copying the code. A build patched only at the formatter **still loses the detail**
+  — that falsifier is what makes this a verified cause rather than a plausible story.
+  Severity Medium · **Priority P2** (no workaround, everyday commands, ~19 call sites, and
+  upstream has fixed five issues of this exact class). No upstream issue covers it.
+  Write-up: `issues/B38.md` · repro assets: `issues/verify-b38/`.
 
 - [x] **B35 · ~~`screenshot -o` output path silently discarded~~ — FIXED UPSTREAM, DO NOT FILE**
   **Fixed under [#119](https://github.com/VibiumDev/vibium/issues/119)** (closed 2026-08-03) by
@@ -346,6 +358,13 @@ Kept so they are not re-raised. All cost real time before being ruled out.
     2026-08-01 — **opened by the maintainer himself**) and **#158** (`pipe --connect`
     disconnects immediately after browser launch, closed 2026-08-04, fixed by
     `102a320`). It still reproduces locally only because nothing is published.
+    **Re-confirmed 2026-08-09 to the hilt:** 20/20 runs on v26.5.31 against freshly-created
+    live endpoints (10 chromedriver `webSocketUrl` sessions + 10 `vibium serve` instances,
+    headless *and* headed with UA-asserted provenance), every one failing
+    `session not created`; a raw BiDi probe on the same socket returns
+    `session already exists`, which is the router's unconditional `session.new`. **Fixed on
+    `main`** by #242 — a build of `59e4b4b` attaches and answers (`rc=0`, real context id).
+    Verified by running the binary, not by reading the commit message.
   - **The original diagnosis was mis-targeted.** It was framed as "`--connect`
     won't attach to the daemon's existing session" — that is a *feature request*,
     not a defect. `--connect` is documented as "connect to a remote BiDi endpoint,"
