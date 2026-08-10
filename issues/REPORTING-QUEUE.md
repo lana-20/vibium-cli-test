@@ -11,7 +11,7 @@ CLI, MCP, JS, Java and Python findings in one place. Update the checkbox and the
 > Pushing to Lana's own repos (`lana-20/*`) is fine and expected — that is where drafts
 > live and get reviewed. The line is the upstream project, not visibility.
 
-Last reconciled with upstream: **2026-08-09** (B38 added; `--connect` re-confirmed fixed) · published npm `latest`: **v26.5.31**
+Last reconciled with upstream: **2026-08-10** (B38 filed as #343; `--connect` re-confirmed fixed) · published npm `latest`: **v26.5.31**
 
 > ## ⚠ 2026-08-07 reconciliation — most of this queue is now dead
 >
@@ -73,8 +73,9 @@ Last reconciled with upstream: **2026-08-09** (B38 added; `--connect` re-confirm
 
 **Header corrected 2026-08-07: "Nothing upstream covers these" was false.** B35 was
 covered by #119, B36 by the #221 PR, and B37 — added and killed the same day — by #206.
-**B24 and FR1 remain fileable, both confirmed against `main` source rather than the
-installed build — and B38 joins them as of 2026-08-09, verified by building `main` itself:**
+**B38 was filed 2026-08-10 as [#343](https://github.com/VibiumDev/vibium/issues/343) — the
+first item to leave this queue since the 2026-08-07 reconciliation. B24 and FR1 remain
+fileable, both confirmed against `main` source rather than the installed build:**
 - **B24** — `mapScript()` (`internal/agent/handlers.go:2848`) still queries a fixed
   interactive-selector list on `main`. A plain `<div class="cup-body">` matches no term
   in it, so the gap is real *and* the enhancement framing is the correct one.
@@ -83,8 +84,9 @@ installed build — and B38 joins them as of 2026-08-09, verified by building `m
   **zero** occurrences. The capability ships; only the CLI/MCP surfaces lack it, which
   is exactly the surface-parity ask.
 
-- [ ] **B38 · BiDi error detail discarded; error code printed twice** — ✅ **NEW 2026-08-09,
-  live on `main` @ `59e4b4b`, verified by building it.** `vibium go "not-a-real-url"` prints
+- [x] **B38 · BiDi error detail discarded; error code printed twice** — ✅ **FILED 2026-08-10 as
+  [#343](https://github.com/VibiumDev/vibium/issues/343), open.** Drafted 2026-08-09, live on
+  `main` @ `59e4b4b`, verified by building it. `vibium go "not-a-real-url"` prints
   `BiDi error: invalid argument - invalid argument`; Chrome sent `Invalid URL: not-a-real-url`.
   Cause is a **parse** defect, not formatting: `Message` (`internal/bidi/protocol.go:43-52`)
   has no field for BiDi's *sibling* `message`, so it is dropped by `encoding/json`; `GetError`
@@ -306,10 +308,11 @@ Original order kept below for the record, struck through:
   uncached image on a published build.
   → [`B30.md`](B30.md)
 
-## C · Filed — ALL NOW CLOSED (table below is stale, kept for history)
+## C · Filed — all closed except #343 (table below is stale, kept for history)
 
-**Re-checked 2026-08-07: every issue in this table is now closed.** The "State" column
-below says OPEN throughout and is wrong. Verified states:
+**Re-checked 2026-08-07: every issue in this table was closed at that point.** The "State"
+column below says OPEN throughout and is wrong for those rows. **#343, added 2026-08-10, is
+genuinely open** — it is the one live filing. Verified states:
 
 | Item | Issue | Actual state 2026-08-07 |
 |---|---|---|
@@ -318,6 +321,7 @@ below says OPEN throughout and is wrong. Verified states:
 | JS Bug 2 · `evaluate` nested `string[][]` | #124 | **closed/completed** — same PR #253 as #221 |
 | Java B3 · `waitForFunction` double-wrap | #174 | **closed/completed** |
 | Java B7 · `page.expose()` | #135 | **closed/duplicate** |
+| **CLI B38 · BiDi error detail discarded** | **#343** | **open — filed 2026-08-10** |
 | Java B10 · `setHeaders` deadlock | #128 | **closed/completed** |
 
 §C1's four (#129, #130, #136, #137) are also all **closed/completed** now — the

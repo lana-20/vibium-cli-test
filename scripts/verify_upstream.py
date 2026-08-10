@@ -179,11 +179,18 @@ def main():
 
     # ------------------------------------------------------------ verdict
     live = [i for i in spec["items"] if i["status"] == "live"]
-    ok_live = [i["id"] for i in live if verdicts[i["id"]] == "STILL VALID"]
+    still = [i for i in live if verdicts[i["id"]] == "STILL VALID"]
+    # A filed bug is still live -- we want to know the moment it is fixed -- but it
+    # is not something to file again. Keep the two apart so the summary cannot read
+    # as "go file this" for an issue that already exists.
+    ok_live = [i["id"] for i in still if not i.get("issue")]
+    filed = [f"{i['id']} (#{i['issue']})" for i in still if i.get("issue")]
     bad = [k for k, v in verdicts.items() if v in ("CHANGED", "UNKNOWN")]
 
     print(f"\n{BOLD}Fileable right now:{OFF} "
           + (", ".join(ok_live) if ok_live else f"{YEL}none{OFF}"))
+    if filed:
+        print(f"{BOLD}Filed and still valid{OFF} {DIM}(watch for a fix){OFF}: {', '.join(filed)}")
     if bad:
         print(f"{YEL}Needs a human look before filing:{OFF} {', '.join(bad)}")
         print(f"{DIM}CHANGED = the source condition moved. UNKNOWN = the anchor moved; "

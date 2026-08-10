@@ -134,8 +134,8 @@
       "title": "BiDi error detail discarded; error code printed twice",
       "status": "live",
       "writeup": "issues/B38.md",
-      "issue": null,
-      "note": "New 2026-08-09. Verified by building main @ 59e4b4b, not by reading commits. Parse defect in bidi.GetError, not a formatting bug.",
+      "issue": 343,
+      "note": "Filed 2026-08-10 as #343 (open). Verified by building main @ 59e4b4b, not by reading commits. Parse defect in bidi.GetError, not a formatting bug. Keep checking: if this flips to FIXED, #343 should be closeable.",
       "source_check": {
         "file": "clicker/internal/bidi/protocol.go",
         "pattern": "return &ErrorData\\{Error: errStr, Message: errStr\\}",
